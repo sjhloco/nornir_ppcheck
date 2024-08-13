@@ -1,0 +1,291 @@
+# The configurations that used for the recording, feel free to edit them
+config:
+
+  # Specify a command to be executed
+  # like `/bin/bash -l`, `ls`, or any other commands
+  # the default is bash for Linux
+  # or powershell.exe for Windows
+  command: bash -l
+
+  # Specify the current working directory path
+  # the default is the current working directory path
+  cwd: /Users/mucholoco/Documents/Coding/Nornir/code/pre_post_checks
+
+  # Export additional ENV variables
+  env:
+    recording: true
+
+  # Explicitly set the number of columns
+  # or use `auto` to take the current
+  # number of columns of your shell
+  cols: 105
+
+  # Explicitly set the number of rows
+  # or use `auto` to take the current
+  # number of rows of your shell
+  rows: 20
+
+  # Amount of times to repeat GIF
+  # If value is -1, play once
+  # If value is 0, loop indefinitely
+  # If value is a positive number, loop n times
+  repeat: 0
+
+  # Quality
+  # 1 - 100
+  quality: 100
+
+  # Delay between frames in ms
+  # If the value is `auto` use the actual recording delays
+  frameDelay: auto
+
+  # Maximum delay between frames in ms
+  # Ignored if the `frameDelay` isn't set to `auto`
+  # Set to `auto` to prevent limiting the max idle time
+  maxIdleTime: 2000
+
+  # The surrounding frame box
+  # The `type` can be null, window, floating, or solid`
+  # To hide the title use the value null
+  # Don't forget to add a backgroundColor style with a null as type
+  frameBox:
+    type: floating
+    title: Terminalizer
+    style:
+      border: 0px black solid
+      # boxShadow: none
+      # margin: 0px
+
+  # Add a watermark image to the rendered gif
+  # You need to specify an absolute path for
+  # the image on your machine or a URL, and you can also
+  # add your own CSS styles
+  watermark:
+    imagePath: null
+    style:
+      position: absolute
+      right: 15px
+      bottom: 15px
+      width: 100px
+      opacity: 0.9
+
+  # Cursor style can be one of
+  # `block`, `underline`, or `bar`
+  cursorStyle: block
+
+  # Font family
+  # You can use any font that is installed on your machine
+  # in CSS-like syntax
+  fontFamily: "Monaco, Lucida Console, Ubuntu Mono, Monospace"
+
+  # The size of the font
+  fontSize: 12
+
+  # The height of lines
+  lineHeight: 1
+
+  # The spacing between letters
+  letterSpacing: 0
+
+  # Theme
+  theme:
+    background: "transparent"
+    foreground: "#afafaf"
+    cursor: "#c7c7c7"
+    black: "#232628"
+    red: "#fc4384"
+    green: "#b3e33b"
+    yellow: "#ffa727"
+    blue: "#75dff2"
+    magenta: "#ae89fe"
+    cyan: "#708387"
+    white: "#d5d5d0"
+    brightBlack: "#626566"
+    brightRed: "#ff7fac"
+    brightGreen: "#c8ed71"
+    brightYellow: "#ebdf86"
+    brightBlue: "#75dff2"
+    brightMagenta: "#ae89fe"
+    brightCyan: "#b1c6ca"
+    brightWhite: "#f9f9f4"
+
+# Records, feel free to edit them
+records:
+  - delay: 1500
+    content: "(nr_inv) macoloco:\e[36mpre_post_checks\e[32m\e[34m\e(B\e[m$"
+  - delay: 201
+    content: p
+  - delay: 201
+    content: 'y'
+  - delay: 201
+    content: t
+  - delay: 201
+    content: h
+  - delay: 201
+    content: o
+  - delay: 201
+    content: 'n'
+  - delay: 201
+    content: ' '
+  - delay: 201
+    content: e
+  - delay: 201
+    content: x
+  - delay: 201
+    content: 'ample_basic.py '
+  - delay: 301
+    content: '-'
+  - delay: 201
+    content: s
+  - delay: 201
+    content: ' '
+  - delay: 201
+    content: '-'
+  - delay: 201
+    content: g
+  - delay: 201
+    content: ' '
+  - delay: 201
+    content: i
+  - delay: 201
+    content: o
+  - delay: 201
+    content: s
+  - delay: 400
+    content: "\r\n"
+  - delay: 1000
+    content: "\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\r\n\e[3;36m8\e[0m hosts have matched the filters \e[3;36m'ios'\e[0m:\r\n\e[32m-Host: HME-SWI-VSS01 \e[0m     \e[3m-Hostname: \e[0m\e[3m10.10.10.1\e[0m\r\n\e[32m-Host: HME-SWI-ACC01 \e[0m     \e[3m-Hostname: \e[0m\e[3m10.10.10.104\e[0m\r\n\e[32m-Host: DC-ASR-WAN01 \e[0m      \e[3m-Hostname: \e[0m\e[3m10.20.10.101\e[0m\r\n\e[32m-Host: DC-\e[0m\e[32m9300\e[0m\e[32m-SWI01 \e[0m     \e[3m-Hostname: \e[0m\e[3m10.20.10.103\e[0m\r\n\e[32m-Host: ET-6509E-VSS-\e[0m\e[32m01\e[0m\e[32m \e[0m   \e[3m-Hostname: \e[0m\e[3m10.30.20.101\e[0m\r\n\e[32m-Host: ET-6509E-VSS-\e[0m\e[32m02\e[0m\e[32m \e[0m   \e[3m-Hostname: \e[0m\e[3m10.30.20.101\e[0m\r\n\e[32m-Host: ET1-\e[0m\e[32m9300\e[0m\e[32m-121T \e[0m     \e[3m-Hostname: \e[0m\e[3m172.17.4.139\e[0m\r\n\e[32m-Host: DC0-SWI-ACC01 \e[0m     \e[3m-Hostname: \e[0m\e[3m172.17.4.217\e[0m\r\n"
+  - delay: 1300
+    content: "(nr_inv) macoloco:\e[36mpre_post_checks\e[32m\e[34m\e(B\e[m$"
+  - delay: 2000
+    content: "\r\n"
+  - delay: 25
+    content: "(nr_inv) macoloco:\e[36mpre_post_checks\e[32m\e[34m\e(B\e[m$"
+  - delay: 201
+    content: p
+  - delay: 201
+    content: 'y'
+  - delay: 201
+    content: t
+  - delay: 201
+    content: h
+  - delay: 201
+    content: o
+  - delay: 201
+    content: "\an"
+  - delay: 201
+    content: ' '
+  - delay: 201
+    content: e
+  - delay: 201
+    content: x
+  - delay: 201
+    content: 'ample_basic.py '
+  - delay: 301
+    content: '-'
+  - delay: 201
+    content: s
+  - delay: 201
+    content: ' '
+  - delay: 201
+    content: '-'
+  - delay: 201
+    content: g
+  - delay: 201
+    content: ' '
+  - delay: 201
+    content: i
+  - delay: 201
+    content: o
+  - delay: 201
+    content: s
+  - delay: 201
+    content: ' '
+  - delay: 201
+    content: i
+  - delay: 201
+    content: o
+  - delay: 201
+    content: s
+  - delay: 201
+    content: x
+  - delay: 201
+    content: e
+  - delay: 201
+    content: ' '
+  - delay: 201
+    content: '-'
+  - delay: 201
+    content: 'n'
+  - delay: 201
+    content: ' '
+  - delay: 201
+    content: W
+  - delay: 201
+    content: A
+  - delay: 201
+    content: 'N'
+  - delay: 400
+    content: "\r\n"
+  - delay: 1000
+    content: "\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\r\n\e[3;36m5\e[0m hosts have matched the filters \e[3;36m'WAN, ios, iosxe'\e[0m:\r\n\e[32m-Host: HME-ASR-WAN01 \e[0m     \e[3m-Hostname: \e[0m\e[3m10.10.10.101\e[0m\r\n\e[32m-Host: DC-ASR-WAN01 \e[0m      \e[3m-Hostname: \e[0m\e[3m10.20.10.101\e[0m\r\n\e[32m-Host: AZ-ASR-WAN01 \e[0m      \e[3m-Hostname: \e[0m\e[3m10.30.10.101\e[0m\r\n\e[32m-Host: ET-ASR-WAN01 \e[0m      \e[3m-Hostname: \e[0m\e[3m172.17.4.101\e[0m\r\n\e[32m-Host: DC1-ASR-WAN02 \e[0m     \e[3m-Hostname: \e[0m\e[3m10.100.100.19\e[0m\r\n"
+  - delay: 1300
+    content: "(nr_inv) macoloco:\e[36mpre_post_checks\e[32m\e[34m\e(B\e[m$"
+  - delay: 2000
+    content: "\r\n"
+  - delay: 25
+    content: "(nr_inv) macoloco:\e[36mpre_post_checks\e[32m\e[34m\e(B\e[m$"
+  - delay: 1000
+    content: python example_basic.py -s -g ios iosxe -n WAN
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 91
+    content: "\b"
+  - delay: 201
+    content: "\e[1@d"
+  - delay: 400
+    content: "\r\n"
+  - delay: 1000
+    content: "\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\e[34m=\e[0m\r\n\e[3;36m5\e[0m hosts have matched the filters \e[3;36m'WAN, ios, iosxe'\e[0m:\r\n\e[32m-Host: HME-ASR-WAN01\e[0m    - \e[3mHostname: \e[0m\e[3m10.10.10.101\e[0m\e[3m, Groups: iosxe, Infra_Logical_Location: WAN, MachineType: Cisco ASR1002-X, IOSVersion: \e[0m\e[3m16.9\e[0m\e[3m.\e[0m\e[3m6\e[0m\e[3m, \e[0m\r\n\e[3mRELEASE SOFTWARE \e[0m\e[1;3m(\e[0m\e[3mfc2\e[0m\e[1;3m)\e[0m\e[3m, Infra_Location: HME, type: router\e[0m\r\n\e[32m-Host: DC-ASR-WAN01\e[0m     - \e[3mHostname: \e[0m\e[3m10.20.10.101\e[0m\e[3m, Groups: iosxe, ios, Infra_Logical_Location: WAN, MachineType: Cisco ASR \e[0m\e[3m1001\e[0m\e[3m-X Router, IOSVersion:\e[0m\r\n\e[3m15.4\e[0m\e[1;3m(\e[0m\e[3m3\e[0m\e[1;3m)\e[0m\e[3mS2, RELEASE SOFTWARE \e[0m\e[1;3m(\e[0m\e[3mfc3\e[0m\e[1;3m)\e[0m\e[3m, Infra_Location: DC, type: router\e[0m\r\n\e[32m-Host: AZ-ASR-WAN01\e[0m     - \e[3mHostname: \e[0m\e[3m10.30.10.101\e[0m\e[3m, Groups: iosxe, Infra_Logical_Location: WAN, MachineType: Cisco ASR \e[0m\e[3m1001\e[0m\e[3m-X Router, IOSVersion: \e[0m\r\n\e[3m15.4\e[0m\e[1;3m(\e[0m\e[3m3\e[0m\e[1;3m)\e[0m\e[3mS2, RELEASE SOFTWARE \e[0m\e[1;3m(\e[0m\e[3mfc3\e[0m\e[1;3m)\e[0m\e[3m, Infra_Location: AZ, type: router\e[0m\r\n\e[32m-Host: ET-ASR-WAN01\e[0m     - \e[3mHostname: \e[0m\e[3m172.17.4.101\e[0m\e[3m, Groups: iosxe, Infra_Logical_Location: WAN, MachineType: Cisco ASR1002-X, IOSVersion: \e[0m\e[3m16.9\e[0m\e[3m.\e[0m\e[3m6\e[0m\e[3m, \e[0m\r\n\e[3mRELEASE SOFTWARE \e[0m\e[1;3m(\e[0m\e[3mfc2\e[0m\e[1;3m)\e[0m\e[3m, Infra_Location: ET, type: router\e[0m\r\n\e[32m-Host: DC1-ASR-WAN02\e[0m    - \e[3mHostname: \e[0m\e[3m10.100.100.19\e[0m\e[3m, Groups: iosxe, Infra_Logical_Location: WAN Edge, MachineType: Cisco ASR \e[0m\e[3m1001\e[0m\e[3m-X Router, \e[0m\r\n\e[3mIOSVersion: \e[0m\e[3m15.4\e[0m\e[1;3m(\e[0m\e[3m3\e[0m\e[1;3m)\e[0m\e[3mS2, RELEASE SOFTWARE \e[0m\e[1;3m(\e[0m\e[3mfc3\e[0m\e[1;3m)\e[0m\e[3m, Infra_Location: DC1, type: router\e[0m\r\n"
+  - delay: 1300
+    content: "(nr_inv) macoloco:\e[36mpre_post_checks\e[32m\e[34m\e(B\e[m$"
+  - delay: 2000
+    content: "\r\n"
+  - delay: 25
+    content: "(nr_inv) macoloco:\e[36mpre_post_checks\e[32m\e[34m\e(B\e[m$"

@@ -1,0 +1,44 @@
+hosts:
+  HME-C3560-SWI01:
+    run_cfg: True
+    cmd_print:
+      - show clock
+      - show ip int brief
+      - show interface status
+      - show ip route vrf BLU
+      - show ip route
+      - show bgp all summary
+#   HME-SWI-VSS01:
+#     # run_cfg: True
+#     cmd_print:
+#       - show ip ospf neighbor
+#     cmd_vital:
+#       - show ip int brief
+#     cmd_detail:
+#       - show version
+#   HME-SWI-VSS02:
+#     run_cfg: True
+#     cmd_print:
+#       - show clock
+#     cmd_detail:
+#       - show int status
+
+# groups:
+#   ios:
+#     # run_cfg: True
+#     cmd_print:
+#       - show bgp all summary
+#     cmd_vital:
+#       - show clock
+#     cmd_detail:
+#       - show ip ospf database
+
+
+all:
+  # run_cfg: True
+  # cmd_print:
+  #   - show etherchannel summary
+  cmd_vital:
+    - show ntp associations
+  # cmd_detail:
+  #   - show bgp all

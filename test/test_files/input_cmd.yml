@@ -1,0 +1,23 @@
+hosts:
+  TEST_HOST:
+    cmd_print:
+      - show run | in hostn
+    cmd_vital:
+      - show arp
+    cmd_detail:
+      - show boot
+groups:
+  ios:
+    cmd_print:
+      - show hosts
+    cmd_vital:
+      - show vrf
+    cmd_detail:
+      - show run
+all:
+  cmd_print:
+    - show history
+  cmd_vital:
+    - show flash
+  cmd_detail:
+    - show history

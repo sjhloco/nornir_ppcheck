@@ -1,0 +1,119 @@
+hosts:
+################################# Only HME-CSR01 ################################## 
+  HME-CSR01:
+  ### IMAGE (strict): show version: The current running image. STRICT
+    image: 15.6(1)S4
+    ### INTF_BR: show ip interface brief - L3 interface and IP address, status is expected to be up (only checks for these interfaces)
+    intf_brief:
+      GigabitEthernet1: 10.80.10.1
+      Loopback111: 111.111.111.111
+    ## CDP: show cdp neighbors - Local interface, the neighbor connected and the remote interface (only checks for these interfaces)
+    cdp_nbr:
+      Gig 1:
+        nbr_name: HME-SWI01.stesworld.com
+        nbr_intf: 0/1
+    # PO (strict): show etherchannel summary - Port-channel, protocol (use NONE for on), member interfaces and status. STRICT, so exact interfaces
+    port_channel:
+      Po1:
+        protocol: LACP
+        members: [Gi2]
+  ### VRF (strict): show vrf - List of member interfaces for each VRF (/ in names can effect strictness)
+    vrf:
+      BLU: [Gi1,Lo11,Lo12]
+  ### ROUTE_SUMMARY (strict): show ip route [vrf XXX] summary | in Total - Total subnets, for non-global RT add name of the vrf to the start
+    route_summary:
+      BLU_subnets: 6
+      GRN_subnets: 5
+  ### VRF_ROUTE: show ip  route vrf XXX - Add name of the vrf to the start of the variable (before _route)
+    BLU_route:
+      0.0.0.0/0: Null0
+      172.16.10.0/24: 10.80.10.2
+      12.12.12.12/32: Loopback12
+  ### OSPF_INTF (strict): show ip ospf interface brief - Strict list of OSPF interfaces with area, cost and state
+    ospf_intf:
+      - intf: Po1
+        area: 0
+        cost: 1
+        state: P2P
+      - intf: Lo111
+        area: 1
+        cost: 1
+        state: LOOP
+      - intf: Lo112
+        area: 1
+        cost: 1
+        state: LOOP
+  ### OSPF_NBR (strict): show ip ospf neighbor - Strict list of OSPF neighbors, state is expected top be FULL
+    ospf_nbr:
+      nbrs: [10.90.10.2]
+  ### OSPF_DB (strict): show ip ospf database database-summary | in Total: - Total LSAs of all types in the LSDB
+    ospf_lsdb:
+      total_lsa: 8
+  ### BGP (strict): show bgp all summary - Strict dictionary of BGP peers and the associated ASN and number of prefixes
+    bgp_summary:
+      10.80.10.2:
+        asn: 65111
+        rcv_pfx: 3
+
+
+################################## Only IOS devices (HME-SWI01) ################################## 
+groups:
+  ios:
+  ### INTF_STATUS: show interface status - L2 interface, speed, duplex, status and vlan (routed, trunk or VLAN ID)
+    intf_status:
+      Po1:
+        duplex: a-full
+        speed: auto
+        status: connected
+        vlan: routed
+      Gi1/1:
+        duplex: a-full
+        speed: auto
+        status: connected
+        vlan: 30
+      Gi1/2:
+        duplex: a-full
+        speed: auto
+        status: connected
+        vlan: trunk
+  ### INTF_SWI_PORT: show interfaces switchport - L2 interface mode (access, trunk down) and VLANs (single or list) over that port
+    intf_swi_port:
+      Gi1/1:
+        mode: access
+        vlan: 30
+      Gi1/2:
+        mode: trunk
+        vlan: [10,20,110]
+  ### VLAN (strict): show vlan brief - VLAN name and list of its interfaces (strict, so all interfaces)
+    vlan:
+      10:
+        name: BLU_VL10
+        intf: [Gi1/0]
+      110:
+        name: GRN_VL110
+        intf: [Gi1/3]
+  ### STP_VLAN: show spanning-tree - List of forwarding (FWD) interfaces per VLAN (access and trunk)
+    stp_vlan:
+      - vlan: 10
+        intf: [Gi1/0,Gi1/2]
+      - vlan: 110
+        intf: [Gi1/2,Gi1/3]
+  ### MAC_TABLE (strict): show mac address-table count [vlan x] | count dynamic|DYNAMIC - Total (all vlans) and/or number of  dynamic MAC addresses 
+    mac_table:
+      total_mac: 1
+      10_total_mac: 0
+  ### VRF_ROUTE: show ip  route vrf XXX - Add name of the vrf to the start of the variable (before _route)
+    BLU_route:
+      0.0.0.0/0: 10.80.10.1
+################################## ALL devices (HME-CSR01 & HME-SWI01) ##################################   
+all:
+  ### ACL (strict): show ip access-lists <name> - Management type extended ACLs, the protocol protocol is always 'IP' and the destination 'any'. STRICT, so exact match
+  acl:
+    - name: TEST_SSH_ACCESS
+      ace:
+        - { remark: MGMT Access - VLAN10 }
+        - { permit: 10.17.10.0/24 }
+        - { remark: Citrix Access }
+        - { permit: 10.10.10.10/32 }
+        - { deny: any }   
+

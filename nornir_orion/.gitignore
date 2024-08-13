@@ -1,0 +1,5 @@
+# A leading "**" followed by a slash (**/) means match in all directories
+**/.DS_Store
+**/__pycache__
+**/nornir.log
+**/TODO

@@ -1,0 +1,11 @@
+hosts:
+  HME-SWI-VSS01:
+    cmd_print:
+      - show ip ospf neighbor
+groups:
+  ios:
+    cmd_print:
+      - show clock
+all:
+  cmd_print:
+    - show etherchannel summary
