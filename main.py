@@ -40,9 +40,10 @@ input_cmd_file = "input_cmd.yml"  # Commands to be run, is in project folder
 # 1. Addition of input arguments and input file validation
 # ----------------------------------------------------------------------------
 class InputValidate:
-    def __init__(self) -> Dict[str, Any]:
+    def __init__(self, working_directory) -> Dict[str, Any]:
         my_theme = {"repr.ipv4": "none", "repr.number": "none", "repr.call": "none"}
         self.rc = Console(theme=Theme(my_theme))
+        self.working_dir = working_directory
 
     # ----------------------------------------------------------------------------
     # CHK_DIR: Checks if change directory exists and creates full file paths
@@ -55,7 +56,7 @@ class InputValidate:
         # DIR: Non-yaml format means is it a working directory. Check for env var and create input & output variable
         else:
             working_dir = os.path.join(
-                os.environ.get("WORKING_DIRECTORY", working_directory), file_path
+                os.environ.get("WORKING_DIRECTORY", self.working_dir), file_path
             )
             if not os.path.exists(working_dir):
                 self.rc.print(
@@ -154,6 +155,7 @@ class InputValidate:
     # 1b. Gathers username/password checking various input options
     # ----------------------------------------------------------------------------
     def get_user_pass(self, args: Dict[str, Any]) -> Dict[str, str]:
+
         # USER: Check for username in this order: args, env var, var, prompt
         device = {}
         if args.get("username") != None:
@@ -161,7 +163,7 @@ class InputValidate:
         elif os.environ.get("DEVICE_USER") != None:
             device["user"] = os.environ["DEVICE_USER"]
         elif device_user != None:
-            device["user"] = os.environ["DEVICE_USER"]
+            device["user"] = device_user
         else:
             device["user"] = input("Enter device username: ")
         # PWORD: Check for password in thid order: env var, prompt
@@ -455,7 +457,7 @@ def task_engine(self, run_type: str, data: Dict[str, Any]) -> None:
 # ----------------------------------------------------------------------------
 def main():
     build_inv = nornir_inv.BuildInventory()  # parsers in nor_inv script
-    input_val = InputValidate()  # parsers & val in this file
+    input_val = InputValidate(working_directory)  # parsers & val in this file
 
     # 1. Gets info input by user by calling local method that calls remote nor_inv method
     tmp_args = input_val.add_arg_parser(build_inv)
