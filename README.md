@@ -1,4 +1,94 @@
-# Nornir Checks
+# Nornir Pre/Post Checks
+
+The idea behind this project is to gather the facts (command outputs) about the network state before and after a change and compare the results. There are 3 possible different command outputs that we are interested in for this purpose:
+
+- **Print:** Outputs you want to print to screen so can eyeball the state before the change
+- **vital:** Outputs you want to compare after the change (will likely be an overlap with some of the print commands)
+- **detail:** Outputs only really needed if are issues after a change (for example full ARP or MAC table)
+
+Nornir is used to gather the command output with its scope of devices based on a static inventory with pre-built filters. This is defined in its own module (*nornir_inv.py*) making it easier to swap out for a dynamic inventory plugin if need be (for example I used with a SolarWinds orion plugin in past).
+
+## Installation and Prerequisites
+
+Clone the repository, create a virtual environment and install the required python packages
+
+```python
+git clone https://github.com/sjhloco/nornir_pcheck.git
+python -m venv ~/venv/nr_pchk
+source ~/venv/nr_pchk/bin/activate
+cd nornir_pcheck/
+pip install -r requirements.txt
+```
+
+**Path locations:** By default the nornir inventory (*inventory/group.yml* & *inventory/hosts.yml*) and project folders (to store commands and outputs) are in *nornir_pcheck*, these can be changed with hardcoded the variables (in *main.py*) or by environment variables
+**Credentials:** Username and password can be passed in at run time (username statically in command, password dynamically prompted) or set in environment variables. It is also possible to hardcode the username variable
+
+To hardcode variables they can be found at the start of *main.py*:
+
+```python
+working_directory = os.path.dirname(__file__)
+inventory = inventory
+default_user = test_user
+```
+
+Alternatively to use environment variables on your local system:
+
+```none
+WORKING_DIRECTORY="/user/home"
+INVENTORY="inventory"
+DEVICE_USER="test_user"
+DEVICE_PWORD="blahblah"
+```
+
+## Input commands *(input_cmd.yml)*
+
+The file is structured around 3 optional dictionaries (must have at least 1 of them) that hold the commands to print (*cmd_print*), vital commands to save (*cmd_vital*) and detail commands to save (*cmd_detail*). Each set is merged into a per-host list at run time.
+
+- **hosts:** Specify commands on a per-host basis
+- **groups:** Specify commands on a per-group basis
+- **all**: Specify commands for all hosts
+
+It is also possible to save the *running config* to file by adding *run_cfg: True* to be compared post change as is the vital command outputs. Below is an file where as *R1* was is member of *ios* it would run all commands from *hosts*, *groups* and *all* as well as gather the running config.
+
+```yaml
+hosts:
+  R1:
+    run_cfg: True
+    cmd_print:
+      - show ip int brief
+    cmd_vital:
+      - show ip int brief
+      - show ip arp brief
+      - show ip route brief
+    cmd_detail:
+     - show ospf database
+     - show ip arp
+     - show ip route
+groups:
+  ios:
+    cmd_print:
+    - show ip ospf neighbor
+    cmd_vital:
+    - show ip ospf neighbor
+    - show ip ospf database database-summary
+    cmd_detail:
+     - show ip ospf database 
+all:
+  cmd_print:
+    - show clock
+    - show version
+  cmd_vital:
+    - show ntp associations
+```
+
+!!!!!!!!!! Done up to here !!!!!!!!!!!!!
+
+
+
+
+Compare can either compare specified files or as part of pre-test will compare the two newest vital files.
+
+
 
 Builds the Nornir inventory from Orion or a static inventory using runtime arguments to perform one of the following 3 pre/post-check actions:
 
@@ -6,81 +96,15 @@ Builds the Nornir inventory from Orion or a static inventory using runtime argum
 - **Save vital commands to file (vtl):** Runs a list of vital commands and saves the output to file
 - **Save detail commands to file (dtl):** Runs a list of detail commands and saves the output to file
 - **compare (com):** Compare the two specified files creating a *.html* file
-- **Nornir-validate(val):** Runs a list of commands and validates actual state against the desired state
+<!-- - **Nornir-validate(val):** Runs a list of commands and validates actual state against the desired state -->
 - **pre-test(pre):** Runs *print, *save vital* and *save_detail*
 - **post-test(pos):** Runs *print*, *save vital* and *compare* against last two vital files (and running config if enabled)
 
-The idea is that print is used for commands you want to eyeball the state of before the change, vital for commands you want to compare after the change and detail for if you have issues and need to check the state of things before the change. Compare can either compare specified files or as part of pre-test will compare the two newest vital files.
 
-## Input files
 
-There are two types of input files that can be used with the script, one to print or save command output (*input_cmd.yml*) and the other for validation (*input_val.yml*). Both files are structured around 3 optional dictionaries, you must have at least 1 of them:
 
-- **hosts:** Specify commands or desired state validations on a per-host basis
-- **groups:** Specify commands or desired state validations on a per-group basis
-- **all**: Specify commands or desired state validations for all hosts
 
-### Input commands *(input_cmd.yml)*
 
-Holds the commands to print (*cmd_print*), vital commands to save (*cmd_vital*) and detail commands to save (*cmd_detail*) with each set merged into a per-host list at run time. For example, if *HME-SWI-VSS01* was a member of *ios* it would run all commands from *hosts*, *groups* and *all*.
-
-It is also possible to save the *running config* to file by adding *run_cfg: True*. The only time this will be ignored is if print is run with a direct file location (rather than working directory) as there will be no output directory to save the file.
-
-```yaml
-hosts:
-  HME-SWI-VSS01:
-    run_cfg: True
-    cmd_print:
-      - show ip ospf neighbor
-      - show ip int brief
-    cmd_vital:
-      - show version
-      - show run
-    cmd_detail:
-     - show ospf database
-groups:
-  ios:
-    cmd_print:
-      - show clock
-    cmd_vital:
-      - show ntp associations
-    cmd_detail:
-     - show status
-all:
-  acl:
-    cmd_print:
-      - show etherchannel summary
-    cmd_vital:
-      - show ip route summary
-    cmd_detail:
-      - show ip route summary
-```
-
-### Input validate *(input_val.yml)*
-
-If there are any conflicts between the objects *groups* takes precedence over *all* and *hosts* takes precedence over *groups*. This example validates port-channels on all devices, ACLs on all IOS devices and OSPF neighbors just on HME-SWI-VSS01.
-
-```yaml
-hosts:
-  HME-SWI-VSS01:
-    ospf:
-      nbrs: [192.168.255.1]
-groups:
-  ios:
-    acl:
-      - name: TEST_SSH_ACCESS
-        ace:
-          - { remark: MGMT Access - VLAN10 }
-          - { permit: 10.17.10.0/24 }
-          - { remark: Citrix Access }
-          - { permit: 10.10.10.10/32 }
-          - { deny: any }
-all:
-  po:
-    - name: Po3
-      mode: LACP
-      members: [Gi0/15, Gi0/16]
-```
 
 ## Runtime flags and files
 
@@ -129,26 +153,7 @@ $ python main.py -n HME-SWI-VSS -pre CH002
 ❌ The 'pre_test' input file /Users/user1/Documents/nornir_checks/CH002/input_files/input_cmd.yml does not exist
 ```
 
-The default parent directory location, directory names and filenames can be changed using the variables at the start of the script. By default the *working_directory is nornir_checks.
 
-```python
-working_directory = os.path.dirname(__file__)
-output_directory = "output"
-input_directory = "input_files"
-input_cmd_file = "input_cmd.yml"
-input_val_file = "input_val.yml"
-```
-
-## Installation and Prerequisites
-
-Clone the repository, create a virtual environment and install the required python packages
-!!!! add note about need to clone sub packages, need to test !!!!!
-
-git clone https://github.com/sjhloco/nornir_check.git
-python -m venv ~/venv/nr_chk
-source ~/venv/nr_chk/bin/activate
-cd nornir_check/
-pip install -r requirements.txt
 
 ## Running the script
 
@@ -271,3 +276,35 @@ vvvv validate_task ** changed : False vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
    cat /Users/user1/Documents/nornir_checks/CH002/output/ET-6509E-VSS01_compliance_report_20220517-08:41.json | python -m json.tool
 ^^^^ END validate_task ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ```
+
+
+
+<!-- ## Input files
+
+There are two types of input files that can be used with the script, one to print or save command output (*input_cmd.yml*) and the other for validation (*input_val.yml*).
+
+ ### Input validate *(input_val.yml)*
+
+If there are any conflicts between the objects *groups* takes precedence over *all* and *hosts* takes precedence over *groups*. This example validates port-channels on all devices, ACLs on all IOS devices and OSPF neighbors just on HME-SWI-VSS01.
+
+```yaml
+hosts:
+  HME-SWI-VSS01:
+    ospf:
+      nbrs: [192.168.255.1]
+groups:
+  ios:
+    acl:
+      - name: TEST_SSH_ACCESS
+        ace:
+          - { remark: MGMT Access - VLAN10 }
+          - { permit: 10.17.10.0/24 }
+          - { remark: Citrix Access }
+          - { permit: 10.10.10.10/32 }
+          - { deny: any }
+all:
+  po:
+    - name: Po3
+      mode: LACP
+      members: [Gi0/15, Gi0/16]
+``` -->

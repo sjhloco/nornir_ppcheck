@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 import glob
 import difflib
+import getpass
 from typing import Any, Dict, List
 
 from rich.console import Console
@@ -15,22 +16,24 @@ from nornir_rich.functions import print_result
 from nornir_utils.plugins.tasks.files import write_file
 from nornir_netmiko.tasks import netmiko_send_command
 
-from nornir_orion import orion_inv
-from nornir_validate.nr_val import validate_task
+import nornir_inv
+
+import ipdb
+
+# from nornir_validate.nr_val import validate_task
 
 # from pathlib import Path
 # from nornir_utils.plugins.tasks.data import echo_data
 
 # ----------------------------------------------------------------------------
-# VARIABLES: Change any variables such as file location
+# VARIABLES: Hardcoded default variables such as file location or username
 # ----------------------------------------------------------------------------
-working_directory = os.path.dirname(
-    __file__
-)  # This needs changing to changes folder at work
-output_directory = "output"  # store reports and output saved to file
-input_directory = "input_files"  # store input files
-input_cmd_file = "input_cmd.yml"
-input_val_file = "input_val.yml"
+working_directory = os.path.dirname(__file__)  # Location of the project folder
+inventory = "inventory"  # Location of the nornir inventory file
+device_user = "test_user"  # Default device username
+output_folder = "output"  # Folder that stores reports and output saved to file
+input_cmd_file = "input_cmd.yml"  # Commands to be run, is in project folder
+# input_val_file = "input_val.yml"      # For future validate
 
 
 # ----------------------------------------------------------------------------
@@ -42,128 +45,134 @@ class InputValidate:
         self.rc = Console(theme=Theme(my_theme))
 
     # ----------------------------------------------------------------------------
-    # 1a. Adds additional arguments to the OrionInventory parser arguments
+    # CHK_DIR: Checks if change directory exists and creates full file paths
     # ----------------------------------------------------------------------------
-    def add_arg_parser(self, orion) -> Dict[str, Any]:
-        args = orion.add_arg_parser()
-        #
-        args.add_argument(
-            "-prt",
-            "--print",
-            help="Name of change folder directory or direct path to input file",
-        )
-        args.add_argument(
-            "-vtl",
-            "--vital_save",
-            help="Name of change folder directory where to save files of vital command outputs",
-        )
-        args.add_argument(
-            "-dtl",
-            "--detail_save",
-            help="Name of change folder directory where to save files of detail command outputs",
-        )
-        args.add_argument(
-            "-val",
-            "--validate",
-            help="Name of change folder directory where to save compliance report",
-        )
-        args.add_argument(
-            "-cmp",
-            "--compare",
-            nargs=3,
-            help="Name of change folder directory where to find files to compare",
-        )
-        args.add_argument(
-            "-pre",
-            "--pre_test",
-            help="Name of change folder directory, runs print, vital_save_file and detail_save_file",
-        )
-        args.add_argument(
-            "-pos",
-            "--post_test",
-            help="Name of change folder directory, runs print, vital_save_file (future compare and validate)",
-        )
-        return args
-
-    # ----------------------------------------------------------------------------
-    # 1b. Checks if change directory and input/ compare files exist
-    # ----------------------------------------------------------------------------
-    def dir_file_exist(self, run_type: str, run_opt: str) -> Dict[str, Any]:
-        # CMP: If it is compare standardise run_opt as it is a list of 3 elements (output_dir & compare files)
-        if run_type == "compare":
-            cmp_files = run_opt[1:3]
-            run_opt = run_opt[0]
-            input_filename = "dummy"
-        # INPUT_FILE: Sets input file based on if is command checks or validate
-        elif run_type == "validate":
-            input_filename = input_val_file
-        else:
-            input_filename = input_cmd_file
-
+    def dir_exist_get_paths(self, run_type: str, file_path: str) -> Dict[str, Any]:
         # PRT: If is 'print' and a single input file (not directory) create input & output variable
-        if ".yml" in run_opt or ".yaml" in run_opt:
-            input_file = run_opt
-            output_dir = None
-        # DIR: None yaml format means is it is a working directory. Check it exists and create input & output variable
+        if ".yml" in file_path or ".yaml" in file_path:
+            input_file = file_path
+            working_dir, output_fldr = (None for i in range(2))
+        # DIR: Non-yaml format means is it a working directory. Check for env var and create input & output variable
         else:
-            working_dir = os.path.join(working_directory, run_opt)
+            working_dir = os.path.join(
+                os.environ.get("WORKING_DIRECTORY", working_directory), file_path
+            )
             if not os.path.exists(working_dir):
                 self.rc.print(
                     f":x: The '{run_type}' working directory {working_dir} does not exist"
                 )
                 sys.exit(1)
             else:
-                output_dir = os.path.join(working_dir, output_directory)
-                input_dir = os.path.join(working_dir, input_directory)
-                input_file = os.path.join(input_dir, input_filename)
-            # If input (source commands) & output (store comand outputs) directories dont exist create them
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
+                output_fldr = os.path.join(working_dir, output_folder)
+                input_file = os.path.join(working_dir, input_cmd_file)
+            # If output (store command outputs) directories dont exist create it
+            if not os.path.exists(output_fldr):
+                os.makedirs(output_fldr)
                 self.rc.print(
-                    f":white_check_mark: Created the directory [i]{output_dir}[/i]"
+                    f":white_check_mark: Created the folder [i]{output_fldr}[/i]"
                 )
-            if not os.path.exists(input_dir):
-                os.makedirs(input_dir)
-                self.rc.print(
-                    f":white_check_mark: Created the directory [i]{input_dir}[/i]"
-                )
+        return working_dir, output_fldr, input_file
 
-        # FILE_EXIST: If compare files or the input files (cmd or val) dont exist exit
-        missing_files = []
-        if run_type == "compare":
-
-            cmp_file1 = os.path.join(output_dir, cmp_files[0])
-            if not os.path.exists(cmp_file1):
-                missing_files.append(cmp_file1)
-            cmp_file2 = os.path.join(output_dir, cmp_files[1])
-            if not os.path.exists(cmp_file2):
-                missing_files.append(cmp_file2)
-            result = dict(
-                output_dir=output_dir, cmp_file1=cmp_file1, cmp_file2=cmp_file2
-            )
-
-        else:
-            # INPUT_FILE: Check input file exists and loads and validate contents
-            if not os.path.exists(input_file):
-                missing_files.append(input_file)
-            elif os.path.exists(input_file):
-                with open(input_file, "r") as file_content:
-                    input_data = yaml.load(file_content, Loader=yaml.FullLoader)
-                self.val_input_file(run_type, input_file, input_data)
-                result = dict(
-                    output_dir=output_dir, input_file=input_file, input_data=input_data
-                )
-
-        # ERR_RETURN: If files are missing (input or compare) exists, otherwise returns full path to the files
+    # ----------------------------------------------------------------------------
+    # ERR_MISS: Errors and exits if files are missing (input or compare)
+    # ----------------------------------------------------------------------------
+    def err_missing_files(self, run_type: str, missing_files: list) -> None:
         if len(missing_files) != 0:
             files = ", ".join(missing_files)
             self.rc.print(f":x: The '{run_type}' file {files} does not exist")
             sys.exit(1)
-        else:
-            return result
 
     # ----------------------------------------------------------------------------
-    # 1c. Get only the args for differnet run types and from that the get one that is used
+    # INPUT_FILE: Validates input files contents are of the correct format
+    # ----------------------------------------------------------------------------
+    def val_input_file(
+        self, run_type: str, input_file: str, input_data: Dict[str, Any]
+    ) -> None:
+        if input_data == None:
+            self.rc.print(f":x: The '{run_type}' input file {input_file} is empty")
+            sys.exit(1)
+        elif (
+            not isinstance(input_data.get("hosts"), dict)
+            and not isinstance(input_data.get("groups"), dict)
+            and not isinstance(input_data.get("all"), dict)
+        ):
+            self.rc.print(
+                f":x: {input_file} must have at least one [i]hosts, groups[/i] or [i]all[/i] dictionary"
+            )
+            sys.exit(1)
+
+    # ----------------------------------------------------------------------------
+    # 1a. Adds additional arguments to the Nornir Inventory parser arguments
+    # ----------------------------------------------------------------------------
+    def add_arg_parser(self, nr_inv_args) -> Dict[str, Any]:
+        args = nr_inv_args.add_arg_parser()
+        args.add_argument(
+            "-u",
+            "--username",
+            help="Device username, overrides environment variables and hardcoded script variable",
+        )
+        args.add_argument(
+            "-prt",
+            "--print",
+            help="Name of change directory or direct path to input file",
+        )
+        args.add_argument(
+            "-vtl",
+            "--vital_save",
+            help="Name of change directory where to save files created from vital command outputs",
+        )
+        args.add_argument(
+            "-dtl",
+            "--detail_save",
+            help="Name of change directory where to save files created from detail command outputs",
+        )
+        ## TBD: May add validate in future
+        # args.add_argument(
+        #     "-val",
+        #     "--validate",
+        #     help="Name of change folder directory where to save compliance report",
+        # )
+        args.add_argument(
+            "-cmp",
+            "--compare",
+            nargs=3,
+            help="Name of directory that holds compare files (where compare output is saved) as well the name of the files to compare",
+        )
+        args.add_argument(
+            "-pre",
+            "--pre_test",
+            help="Name of change directory, runs print, vital_save_file and detail_save_file",
+        )
+        args.add_argument(
+            "-pos",
+            "--post_test",
+            help="Name of change directory, runs print, vital_save_file and compare (of vital)",
+        )
+        return args
+
+    # ----------------------------------------------------------------------------
+    # 1b. Gathers username/password checking various input options
+    # ----------------------------------------------------------------------------
+    def get_user_pass(self, args: Dict[str, Any]) -> Dict[str, str]:
+        # USER: Check for username in this order: args, env var, var, prompt
+        device = {}
+        if args.get("username") != None:
+            device["user"] = args["username"]
+        elif os.environ.get("DEVICE_USER") != None:
+            device["user"] = os.environ["DEVICE_USER"]
+        elif device_user != None:
+            device["user"] = os.environ["DEVICE_USER"]
+        else:
+            device["user"] = input("Enter device username: ")
+        # PWORD: Check for password in thid order: env var, prompt
+        if os.environ.get("DEVICE_PWORD") != None:
+            device["pword"] = os.environ["DEVICE_PWORD"]
+        else:
+            device["pword"] = getpass.getpass("Enter device password: ")
+        return device
+
+    # ----------------------------------------------------------------------------
+    # 1c. Get only the args for different run types and from that the get one that is used
     # ----------------------------------------------------------------------------
     def get_run_type(self, args: Dict[str, Any]) -> str:
         run_type, file_path = (None for i in range(2))
@@ -172,7 +181,7 @@ class InputValidate:
             "vital_save",
             "detail_save",
             "compare",
-            "validate",
+            # "validate",
             "pre_test",
             "post_test",
         ]
@@ -184,23 +193,40 @@ class InputValidate:
         return run_type, file_path
 
     # ----------------------------------------------------------------------------
-    # 1d. Validates input files contents are of the correct format
+    # 1d. If compare arg validates all the files exist (a list of 3 elements, output_dir & 2 compare files)
     # ----------------------------------------------------------------------------
-    def val_input_file(
-        self, run_type: str, input_file_path: str, input_data: Dict[str, Any]
-    ) -> None:
-        if input_data == None:
-            self.rc.print(f":x: The '{run_type}' input file {input_file_path} is empty")
-            sys.exit(1)
-        elif (
-            not isinstance(input_data.get("hosts"), dict)
-            and not isinstance(input_data.get("groups"), dict)
-            and not isinstance(input_data.get("all"), dict)
-        ):
-            self.rc.print(
-                f":x: {input_file_path} must have at least one [i]hosts, groups[/i] or [i]all[/i] dictionary"
+    def val_compare_arg(self, run_type: str, file_path: str) -> Dict[str, Any]:
+        missing_files = []
+        # DIR: Check that output dir exists and get full file path
+        working_dir, output_fldr, z = self.dir_exist_get_paths(run_type, file_path[0])
+        # FILE: Check that compare files exist
+        cmp_file1 = os.path.join(working_dir, file_path[1])
+        if not os.path.exists(cmp_file1):
+            missing_files.append(cmp_file1)
+        cmp_file2 = os.path.join(working_dir, file_path[2])
+        if not os.path.exists(cmp_file2):
+            missing_files.append(cmp_file2)
+        # ERR/RTR: Errors or returns file paths based on whether exist or not
+        self.err_missing_files(run_type, missing_files)
+        return dict(output_fldr=output_fldr, cmp_file1=cmp_file1, cmp_file2=cmp_file2)
+
+    # ----------------------------------------------------------------------------
+    # 1e. Validates input command file exists and contents are of the correct format
+    # ----------------------------------------------------------------------------
+    def val_noncompare_arg(self, run_type: str, file_path: str) -> Dict[str, Any]:
+        # DIR: Check that output dir exists and get full file path
+        z, output_fldr, input_file = self.dir_exist_get_paths(run_type, file_path)
+        # FILE: Check input file exists and loads and validate contents
+        if not os.path.exists(input_file):
+            self.err_missing_files(run_type, [input_file])
+        elif os.path.exists(input_file):
+            with open(input_file, "r") as file_content:
+                input_data = yaml.load(file_content, Loader=yaml.FullLoader)
+            # ERR/RTR: Errors or returns file paths based on whether input file correctly formatted
+            self.val_input_file(run_type, input_file, input_data)
+            return dict(
+                output_fldr=output_fldr, input_file=input_file, input_data=input_data
             )
-            sys.exit(1)
 
 
 # ----------------------------------------------------------------------------
@@ -393,73 +419,90 @@ class NornirCommands:
                 pass
             return Result(host=task.host, result="\n".join(result))
 
-    # ----------------------------------------------------------------------------
-    # 2c. Task engine to run either run nornir task for commands or validate
-    # ----------------------------------------------------------------------------
-    def task_engine(self, run_type: str, data: Dict[str, Any]) -> None:
-        run_type = run_type.replace("_save", "")
-        # Runs the command print or save tasks
-        if run_type != "validate":
-            result = self.nr_inv.run(
-                name=f"{run_type.upper()} command output",
-                task=self.cmd_engine,
-                data=data,
-                run_type=run_type,
-            )
-        # Runs the validate tasks
-        elif run_type == "validate":
-            result = self.nr_inv.run(
-                task=validate_task,
-                input_data=data["input_file"],
-                directory=data["output_dir"],
-            )
-        # Only prints out result if commands commands where run against a device
-        if result[list(result.keys())[0]].result != "Nothing run":
-            # Adds report information (report_text) if nr_validate has been run
-            try:
-                result[list(result.keys())[0]].report_text
-                print_result(result, vars=["result", "report_text"])
-            except:
-                print_result(result, vars=["result"])
+
+# ----------------------------------------------------------------------------
+# 2c. Task engine to run either run nornir task for commands or validate
+# ----------------------------------------------------------------------------
+def task_engine(self, run_type: str, data: Dict[str, Any]) -> None:
+    run_type = run_type.replace("_save", "")
+    # Runs the command print or save tasks
+    if run_type != "validate":
+        result = self.nr_inv.run(
+            name=f"{run_type.upper()} command output",
+            task=self.cmd_engine,
+            data=data,
+            run_type=run_type,
+        )
+    # Runs the validate tasks
+    elif run_type == "validate":
+        result = self.nr_inv.run(
+            task=validate_task,
+            input_data=data["input_file"],
+            directory=data["output_dir"],
+        )
+    # Only prints out result if commands commands where run against a device
+    if result[list(result.keys())[0]].result != "Nothing run":
+        # Adds report information (report_text) if nr_validate has been run
+        try:
+            result[list(result.keys())[0]].report_text
+            print_result(result, vars=["result", "report_text"])
+        except:
+            print_result(result, vars=["result"], line_breaks=True)
 
 
 # ----------------------------------------------------------------------------
 # Engine that runs the methods from the script
 # ----------------------------------------------------------------------------
-def main(inv_settings: str):
-    orion = orion_inv.OrionInventory()
-    input_val = InputValidate()
-    inv_validate = orion_inv.LoadValInventorySettings()
+def main():
+    build_inv = nornir_inv.BuildInventory()  # parsers in nor_inv script
+    input_val = InputValidate()  # parsers & val in this file
 
-    # 1. Gets info input by user by calling local method that calls remote method
-    tmp_args = input_val.add_arg_parser(orion)
+    # 1. Gets info input by user by calling local method that calls remote nor_inv method
+    tmp_args = input_val.add_arg_parser(build_inv)
     args = vars(tmp_args.parse_args())
-    # 2. Load and validates the orion inventory settings, adds any runtime usernames
-    inv_settings = inv_validate.load_inv_settings(args, inv_settings)
 
-    # 3a. Tests username and password against orion
-    if args.get("npm_user") != None:
-        orion.test_npm_creds(inv_settings["npm"])
-        # 3b. Initialise Nornir inventory
-        nr_inv = orion.load_inventory(inv_settings["npm"], inv_settings["groups"])
-    # 3c. Uses static inventory instead of Orion
-    elif args.get("npm_user") == None:
-        nr_inv = orion.load_static_inventory(
-            "inventory/hosts.yml", "inventory/groups.yml"
-        )
-    # 4. Filter the inventory based on the runtime flags
-    nr_inv = orion.filter_inventory(args, nr_inv)
-    # 5. add username and password to defaults
-    nr_inv = orion.inventory_defaults(nr_inv, inv_settings["device"])
+    # 2. Loads inventory using static host and group files (checks first if location changed with env vars)
+    nr_inv = build_inv.load_inventory(
+        os.path.join(os.environ.get("INVENTORY", inventory), "hosts.yml"),
+        os.path.join(os.environ.get("INVENTORY", inventory), "groups.yml"),
+    )
 
-    # 6. Get the run type (flag used) and validate the input file
+    # 3. Filter the inventory based on the runtime flags
+    nr_inv = build_inv.filter_inventory(args, nr_inv)
+
+    # 4. Add username and password to Nornir inventory defaults
+    device = input_val.get_user_pass(args)
+    nr_inv = build_inv.inventory_defaults(nr_inv, device)
+
+    # 5. Get the run type (flag used) and validate the input file
     run_type, file_path = input_val.get_run_type(args)
-    if run_type != None:
-        data = input_val.dir_file_exist(run_type, file_path)
-    # 7. Run the nornir tasks dependant on the run type (runtime flag)
-    nr_cmd = NornirCommands(nr_inv)
-    nr_cmd.task_engine(run_type, data)
 
+    # 6a. Validate directories and files exist for compare
+    if run_type == "compare":
+        result = input_val.val_compare_arg(run_type, file_path)
+    elif run_type != None:
+        result = input_val.val_noncompare_arg(run_type, file_path)
+    # ipdb.set_trace()
+    # from pprint import pprint
+
+    # pprint(result)
+
+    #! Done upto here,
+
+
+#! once here can do all unit tests for class InputValidate
+
+#   user: test_user
+#   pword: L00K_pa$$w0rd_github!
+
+# # 7. Run the nornir tasks dependant on the run type (runtime flag)
+# nr_cmd = NornirCommands(nr_inv)
+# nr_cmd.task_engine(run_type, data)
+
+
+# INPUT_FILE: Sets input file based on if is command checks or validate
+# elif run_type == "validate":
+#     input_filename = input_val_file
 
 if __name__ == "__main__":
-    main("inv_settings.yml")
+    main()

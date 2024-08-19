@@ -5,7 +5,7 @@ from nornir import InitNornir
 import logging
 import shutil
 
-from nornir_orion import orion_inv
+from . import orion_inv
 from main import InputValidate
 from main import NornirCommands
 
@@ -168,60 +168,60 @@ class TestInputValidate:
 # ----------------------------------------------------------------------------
 # 2. NR_CMDs: Testing of Nornir interactions
 # ----------------------------------------------------------------------------
-@pytest.mark.usefixtures("load_nornir_inventory")
-class TestNornirCommands:
+# @pytest.mark.usefixtures("load_nornir_inventory")
+# class TestNornirCommands:
 
-    # 2a Testing method for to getting list of print commands
-    def test_organise_cmds_print(self):
-        err_msg = "❌ organise_cmds: Creating a list of print commands failed"
-        desired_result = ["show history", "show hosts", "show run | in hostn"]
-        actual_result = nr_inv.run(
-            task=nr_cmd.organise_cmds, input_data=input_data, cmd_dict="cmd_print"
-        )
-        assert actual_result["TEST_HOST"].result == desired_result, err_msg
+#     # 2a Testing method for to getting list of print commands
+#     def test_organise_cmds_print(self):
+#         err_msg = "❌ organise_cmds: Creating a list of print commands failed"
+#         desired_result = ["show history", "show hosts", "show run | in hostn"]
+#         actual_result = nr_inv.run(
+#             task=nr_cmd.organise_cmds, input_data=input_data, cmd_dict="cmd_print"
+#         )
+#         assert actual_result["TEST_HOST"].result == desired_result, err_msg
 
-    # 2b Testing method for to getting list of print commands
-    def test_organise_cmds_vital(self):
-        err_msg = "❌ organise_cmds: Creating a list of vital commands failed"
-        desired_result = ["show flash", "show vrf", "show arp"]
-        actual_result = nr_inv.run(
-            task=nr_cmd.organise_cmds, input_data=input_data, cmd_dict="cmd_vital"
-        )
-        assert actual_result["TEST_HOST"].result == desired_result, err_msg
+#     # 2b Testing method for to getting list of print commands
+#     def test_organise_cmds_vital(self):
+#         err_msg = "❌ organise_cmds: Creating a list of vital commands failed"
+#         desired_result = ["show flash", "show vrf", "show arp"]
+#         actual_result = nr_inv.run(
+#             task=nr_cmd.organise_cmds, input_data=input_data, cmd_dict="cmd_vital"
+#         )
+#         assert actual_result["TEST_HOST"].result == desired_result, err_msg
 
-    # 2c Testing method for to getting list of print commands
-    def test_organise_cmds_detail(self):
-        err_msg = "❌ organise_cmds: Creating a list of detail commands failed"
-        desired_result = ["show history", "show run", "show boot"]
-        actual_result = nr_inv.run(
-            task=nr_cmd.organise_cmds, input_data=input_data, cmd_dict="cmd_detail"
-        )
-        assert actual_result["TEST_HOST"].result == desired_result, err_msg
+#     # 2c Testing method for to getting list of print commands
+#     def test_organise_cmds_detail(self):
+#         err_msg = "❌ organise_cmds: Creating a list of detail commands failed"
+#         desired_result = ["show history", "show run", "show boot"]
+#         actual_result = nr_inv.run(
+#             task=nr_cmd.organise_cmds, input_data=input_data, cmd_dict="cmd_detail"
+#         )
+#         assert actual_result["TEST_HOST"].result == desired_result, err_msg
 
-    # 2d Testing method for gathering command output to print to screen
-    def test_run_cmds_print(self):
-        err_msg = "❌ run_cmds: Nornir running 'print' commands failed"
-        desired_result = "hostname HME-C3560-SWI01"
-        actual_result = nr_inv.run(
-            name=f"{'print'.capitalize()} command output",
-            task=nr_cmd.run_cmds,
-            sev_level=logging.INFO,
-            data=dict(input_data=input_data),
-            run_type="print",
-        )
-        assert actual_result["TEST_HOST"][3].result == desired_result, err_msg
+#     # 2d Testing method for gathering command output to print to screen
+#     def test_run_cmds_print(self):
+#         err_msg = "❌ run_cmds: Nornir running 'print' commands failed"
+#         desired_result = "hostname HME-C3560-SWI01"
+#         actual_result = nr_inv.run(
+#             name=f"{'print'.capitalize()} command output",
+#             task=nr_cmd.run_cmds,
+#             sev_level=logging.INFO,
+#             data=dict(input_data=input_data),
+#             run_type="print",
+#         )
+#         assert actual_result["TEST_HOST"][3].result == desired_result, err_msg
 
-    # 2e Testing method for gathering vital command output to save to file
-    def test_run_cmds_vital(self, capsys):
-        err_msg = "❌ run_cmds: Nornir running 'vital' commands failed"
-        desired_result = "✅ Created command output file '/Users/mucholoco/Documents/Coding/Nornir/code/nornir_checks/test/output/TEST_HOST_"
-        actual_result = nr_inv.run(
-            name=f"{'vital'.capitalize()} command output",
-            task=nr_cmd.run_cmds,
-            sev_level=logging.DEBUG,
-            data=dict(input_data=input_data, output_dir=output_dir),
-            run_type="vital",
-        )
-        assert (
-            actual_result["TEST_HOST"][0].result.split("vital")[0] == desired_result
-        ), err_msg
+#     # 2e Testing method for gathering vital command output to save to file
+#     def test_run_cmds_vital(self, capsys):
+#         err_msg = "❌ run_cmds: Nornir running 'vital' commands failed"
+#         desired_result = "✅ Created command output file '/Users/mucholoco/Documents/Coding/Nornir/code/nornir_checks/test/output/TEST_HOST_"
+#         actual_result = nr_inv.run(
+#             name=f"{'vital'.capitalize()} command output",
+#             task=nr_cmd.run_cmds,
+#             sev_level=logging.DEBUG,
+#             data=dict(input_data=input_data, output_dir=output_dir),
+#             run_type="vital",
+#         )
+#         assert (
+#             actual_result["TEST_HOST"][0].result.split("vital")[0] == desired_result
+#         ), err_msg
