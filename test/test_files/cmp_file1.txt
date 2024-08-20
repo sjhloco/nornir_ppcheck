@@ -1,0 +1,25 @@
+==== show ip int brief ==============================================================
+Interface              IP-Address      OK? Method Status                Protocol
+GigabitEthernet1       10.30.10.10     YES manual up                    up      
+GigabitEthernet2       unassigned      YES unset  administratively down down    
+GigabitEthernet3       unassigned      YES unset  administratively down down    
+Loopback1              172.16.1.1      YES manual up                    up      
+Loopback2              172.16.2.2      YES manual up                    up      
+
+
+==== show ip arp summary ============================================================
+3 IP ARP entries, with 0 of them incomplete
+
+
+==== show ip route summary ==========================================================
+IP routing table name is default (0x0)
+IP routing table maximum-paths is 32
+Route Source    Networks    Subnets     Replicates  Overhead    Memory (bytes)
+application     0           0           0           0           0
+connected       0           4           0           416         1248
+static          1           0           0           104         312
+internal        2                                               1064
+Total           3           4           0           520         2624
+
+
+

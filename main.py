@@ -197,7 +197,7 @@ class InputValidate:
     # ----------------------------------------------------------------------------
     # 1d. If compare arg validates all the files exist (a list of 3 elements, output_dir & 2 compare files)
     # ----------------------------------------------------------------------------
-    def val_compare_arg(self, run_type: str, file_path: str) -> Dict[str, Any]:
+    def val_compare_arg(self, run_type: str, file_path: list) -> Dict[str, Any]:
         missing_files = []
         # DIR: Check that output dir exists and get full file path
         working_dir, output_fldr, z = self.dir_exist_get_paths(run_type, file_path[0])

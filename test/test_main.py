@@ -4,8 +4,7 @@ import yaml
 from nornir import InitNornir
 import logging
 import shutil
-
-
+from unittest.mock import patch
 import nornir_inv
 from main import InputValidate
 from main import NornirCommands
@@ -151,161 +150,63 @@ class TestInputValidate:
         assert actual_result == desired_result, err_msg
 
     # 1e. Testing method for getting username and password
+    @patch("getpass.getpass")
+    def test_get_user_pass(self, getpass):
+        getpass.return_value = "test_pass"
+        err_msg = "❌ dir_get_user_pass: Test to get username and/or password failed"
+        desired_result = dict(user="test_user", pword="test_pass")
+        actual_result = input_val.get_user_pass(dict(username="test_user"))
+        assert actual_result == desired_result, err_msg
 
+    # 1f. Testing method for running script to validate with compare arg
+    def test_val_compare_arg(self, capsys):
+        # Test errors if compare files are missing
+        err_msg = (
+            "❌ dir_val_compare_arg: Test to error on missing compare files failed"
+        )
+        desired_result = f"❌ The 'cmp' file {os.path.join(working_dir, 'miss_cmp_file1')}, {os.path.join(working_dir, 'miss_cmp_file2')} does not exist"
+        try:
+            input_val.val_compare_arg(
+                "cmp", ["test_files", "miss_cmp_file1", "miss_cmp_file2"]
+            )
+        except SystemExit:
+            pass
+        assert capsys.readouterr().out.replace("\n", "") == desired_result, err_msg
+        # Test returns dict of compare full file path
+        err_msg = "❌ dir_get_user_pass: Creation of compare file paths failed"
+        desired_result = dict(
+            cmp_file1=os.path.join(working_dir, "cmp_file1.txt"),
+            cmp_file2=os.path.join(working_dir, "cmp_file2.txt"),
+            output_fldr=output_fldr,
+        )
+        actual_result = input_val.val_compare_arg(
+            "cmp", ["test_files", "cmp_file1.txt", "cmp_file2.txt"]
+        )
+        assert actual_result == desired_result, err_msg
 
-#     def test_get_user_pass(self):
-
-#    def get_user_pass(self, args: Dict[str, Any]) -> Dict[str, str]:
-
-#         # USER: Check for username in this order: args, env var, var, prompt
-#         device = {}
-#         if args.get("username") != None:
-#             device["user"] = args["username"]
-#         elif os.environ.get("DEVICE_USER") != None:
-#             device["user"] = os.environ["DEVICE_USER"]
-#         elif device_user != None:
-#             device["user"] = device_user
-#         else:
-#             device["user"] = input("Enter device username: ")
-#         # PWORD: Check for password in thid order: env var, prompt
-#         if os.environ.get("DEVICE_PWORD") != None:
-#             device["pword"] = os.environ["DEVICE_PWORD"]
-#         else:
-#             device["pword"] = getpass.getpass("Enter device password: ")
-#         return device
-
-# 1f. Testing method for running script to validate with compare arg
-# def test_val_compare_arg(self):
-
-# # ----------------------------------------------------------------------------
-# # 1d. If compare arg validates all the files exist (a list of 3 elements, output_dir & 2 compare files)
-# # ----------------------------------------------------------------------------
-# def val_compare_arg(self, run_type: str, file_path: str) -> Dict[str, Any]:
-#     missing_files = []
-#     # DIR: Check that output dir exists and get full file path
-#     working_dir, output_fldr, z = self.dir_exist_get_paths(run_type, file_path[0])
-#     # FILE: Check that compare files exist
-#     cmp_file1 = os.path.join(working_dir, file_path[1])
-#     if not os.path.exists(cmp_file1):
-#         missing_files.append(cmp_file1)
-#     cmp_file2 = os.path.join(working_dir, file_path[2])
-#     if not os.path.exists(cmp_file2):
-#         missing_files.append(cmp_file2)
-#     # ERR/RTR: Errors or returns file paths based on whether exist or not
-#     self.err_missing_files(run_type, missing_files)
-#     return dict(output_fldr=output_fldr, cmp_file1=cmp_file1, cmp_file2=cmp_file2)
-
-
-# # 1g. Testing method for running script to validate with any arg other than compare
-# def test_val_noncompare_arg(self):
-
-# # ----------------------------------------------------------------------------
-# # 1e. Validates input command file exists and contents are of the correct format
-# # ----------------------------------------------------------------------------
-# def val_noncompare_arg(self, run_type: str, file_path: str) -> Dict[str, Any]:
-#     # DIR: Check that output dir exists and get full file path
-#     z, output_fldr, input_file = self.dir_exist_get_paths(run_type, file_path)
-#     # FILE: Check input file exists and loads and validate contents
-#     if not os.path.exists(input_file):
-#         self.err_missing_files(run_type, [input_file])
-#     elif os.path.exists(input_file):
-#         with open(input_file, "r") as file_content:
-#             input_data = yaml.load(file_content, Loader=yaml.FullLoader)
-#         # ERR/RTR: Errors or returns file paths based on whether input file correctly formatted
-#         self.val_input_file(run_type, input_file, input_data)
-#         return dict(
-#             output_fldr=output_fldr, input_file=input_file, input_data=input_data
-#         )
-
-
-# ? 1a. dir_exist_get_paths(self, run_type: str, file_path: str) -> Dict[str, Any]:
-# ? 1b. err_missing_files(self, run_type: str, missing_files: list) -> None:
-# ? 1c.  val_input_file(self, run_type: str, input_file: str, input_data: Dict[str, Any]) -> None:
-# ? 1d. def add_arg_parser(self, nr_inv_args) -> Dict[str, Any]:
-# 1e. def get_user_pass(self, args: Dict[str, Any]) -> Dict[str, str]:
-# 1f. def val_compare_arg(self, run_type: str, file_path: str) -> Dict[str, Any]:
-# 1g. def val_noncompare_arg(self, run_type: str, file_path: str) -> Dict[str, Any]:
-
-
-# # 1b. Testing method for checking input file exist check and loaded correctly
-# def test_dir_file_exist(self, capsys):
-#     err_msg = "❌ dir_file_exist: No input file exist check failed"
-#     desired_result = (
-#         "❌ The 'validate' input file test_path/test_file.yml does not exist\n"
-#     )
-#     try:
-#         input_val.dir_file_exist("validate", "test_path/test_file.yml", "test.yml")
-#     except SystemExit:
-#         pass
-#     assert capsys.readouterr().out == desired_result, err_msg
-
-#     err_msg = "❌ dir_file_exist: Input file load check failed"
-#     desired_result = {
-#         "input_data": {
-#             "all": {"cmd_print": ["show etherchannel summary"]},
-#             "groups": {"ios": {"cmd_print": ["show clock"]}},
-#             "hosts": {"HME-SWI-VSS01": {"cmd_print": ["show ip ospf neighbor"]}},
-#         },
-#         "input_file": "/Users/mucholoco/Documents/Coding/Nornir/code/nornir_checks/test/test_files/input_cmd.yml",
-#         "output_fldr": None,
-#     }
-#     test_file = os.path.join(input_fldr, "input_cmd.yml")
-#     actual_result = input_val.dir_file_exist("print", test_file, "test.yml")
-#     assert actual_result == desired_result, err_msg
-
-# # 1c. Testing method for getting run_type flag and file path
-# def test_get_run_type(self):
-#     args = {
-#         "compare": None,
-#         "detail_save": None,
-#         "device_user": None,
-#         "group": None,
-#         "hostname": None,
-#         "location": None,
-#         "logical": None,
-#         "npm_user": None,
-#         "post_test": None,
-#         "pre_test": "TEST_DIR",
-#         "print": None,
-#         "show": False,
-#         "show_detail": False,
-#         "type": None,
-#         "validate": None,
-#         "version": None,
-#         "vital_save": None,
-#     }
-#     err_msg = "❌ get_run_type: Get run_type flag failed"
-#     assert input_val.get_run_type(args) == ("pre_test", "TEST_DIR"), err_msg
-
-# # 1d. Testing method for top-level (hosts, groups, all) input file format
-# def test_val_input_file(self, capsys):
-#     err_msg = "❌ val_input_file: Empty input file check failed"
-#     desired_result = "❌ The 'print' input file test_path is empty\n"
-#     try:
-#         input_val.val_input_file("print", "test_path", None)
-#     except SystemExit:
-#         pass
-#     assert capsys.readouterr().out == desired_result, err_msg
-
-#     err_msg = "❌ val_input_file: Missing hosts/groups/all input file check failed"
-#     desired_result = (
-#         "❌ test_path must have at least one hosts, groups or all dictionary\n"
-#     )
-#     try:
-#         input_val.val_input_file("print", "test_path", {"host": {}})
-#     except SystemExit:
-#         pass
-#     assert capsys.readouterr().out == desired_result, err_msg
-
-#     err_msg = "❌ val_input_file: hosts/groups/all not dict input file check failed"
-#     desired_result = (
-#         "❌ test_path must have at least one hosts, groups or all dictionary\n"
-#     )
-#     try:
-#         input_val.val_input_file("print", "test_path", {"groups": []})
-#     except SystemExit:
-#         pass
-#     assert capsys.readouterr().out == desired_result, err_msg
+    # 1g. Testing method for running script to validate with any arg other than compare
+    def test_val_noncompare_arg(self, capsys):
+        # Test errors if input file is missing
+        err_msg = (
+            "❌ dir_val_noncompare_arg: Test to error on missing input files failed"
+        )
+        desired_result = f"❌ The 'pre' file {os.path.join(test_directory, 'test_output/input_cmd.yml')} does not exist"
+        try:
+            input_val.val_noncompare_arg("pre", "test_output")
+        except SystemExit:
+            pass
+        assert capsys.readouterr().out.replace("\n", "") == desired_result, err_msg
+        # Test returns dict of compare full file path
+        err_msg = "❌ dir_get_user_pass: Creation of input file paths and data failed"
+        with open(os.path.join(working_dir, "input_cmd.yml"), "r") as file_content:
+            input_data = yaml.load(file_content, Loader=yaml.FullLoader)
+        desired_result = dict(
+            input_data=input_data,
+            input_file=os.path.join(working_dir, "input_cmd.yml"),
+            output_fldr=output_fldr,
+        )
+        actual_result = input_val.val_noncompare_arg("pre", "test_files")
+        assert actual_result == desired_result, err_msg
 
 
 # ----------------------------------------------------------------------------
