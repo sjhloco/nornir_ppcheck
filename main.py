@@ -19,6 +19,7 @@ from nornir_netmiko.tasks import netmiko_send_command
 import nornir_inv
 
 import ipdb
+from pprint import pprint
 
 # from nornir_validate.nr_val import validate_task
 
@@ -232,46 +233,45 @@ class InputValidate:
 
 
 # ----------------------------------------------------------------------------
-# 2. Uses nornir to run commands or validation
+# 2. Uses nornir to run commands
 # ----------------------------------------------------------------------------
 class NornirCommands:
     def __init__(self, nr_inv: "nornir"):
         self.nr_inv = nr_inv
 
     # ----------------------------------------------------------------------------
+    # CMDS: Creates a dictionary of the commands
+    # ----------------------------------------------------------------------------
+    def get_cmds(self, cmds, input_data: Dict[str, Any]) -> None:
+        cmds["run_cfg"] = cmds["run_cfg"] + input_data.get("run_cfg", False)
+        cmds["print"].extend(input_data.get("cmd_print", []))
+        cmds["vital"].extend(input_data.get("cmd_vital", []))
+        cmds["detail"].extend(input_data.get("cmd_detail", []))
+        self.cmds = cmds        # Needed so can unittest this method as no return
+
+    # ----------------------------------------------------------------------------
     # 2a. ORG_CMD: Filters the commands based on the host got from nornir task
     # ----------------------------------------------------------------------------
     def organise_cmds(self, task: "task", input_data: Dict[str, Any]) -> list:
         cmds = dict(print=[], vital=[], detail=[], run_cfg=False)
-
-        # Used to create a dictionary of the commands
-        def get_cmds(tmp_input_data: Dict[str, Any]) -> Dict[str, Any]:
-            cmds["print"].extend(tmp_input_data.get("cmd_print", []))
-            cmds["vital"].extend(tmp_input_data.get("cmd_vital", []))
-            cmds["detail"].extend(tmp_input_data.get("cmd_detail", []))
-
         # If run_cfg is set gathers and saves that first before getting the rest of commands
         if input_data.get("all") != None:
-            cmds["run_cfg"] = cmds["run_cfg"] + input_data["all"].get("run_cfg", False)
-            get_cmds(input_data["all"])
+            self.get_cmds(cmds, input_data["all"])
         if input_data.get("groups") != None:
             for each_grp in input_data["groups"]:
                 if each_grp in task.host.groups:
-                    grp = input_data["groups"][each_grp]
-                    cmds["run_cfg"] = cmds["run_cfg"] + grp.get("run_cfg", False)
-                    get_cmds(grp)
+                    self.get_cmds(cmds, input_data["groups"][each_grp])
         if input_data.get("hosts") != None:
             for each_hst in input_data["hosts"]:
                 if (
                     each_hst.lower() == str(task.host).lower()
                     or each_hst.lower() == str(task.host.hostname).lower()
                 ):
-                    hst = input_data["hosts"][each_hst]
-                    cmds["run_cfg"] = cmds["run_cfg"] + hst.get("run_cfg", False)
-                    get_cmds(hst)
+                    self.get_cmds(cmds, input_data["hosts"][each_hst])
         if cmds["run_cfg"] == True:
             cmds["run_cfg"] = ["show running-config"]
         return cmds
+        # ! do unit tests
 
     # ----------------------------------------------------------------------------
     # RUN_CMD: Runs a list of commands on a device
@@ -369,6 +369,7 @@ class NornirCommands:
         result, empty_result = ([] for i in range(2))
         cmds = self.organise_cmds(task, data.get("input_data", {}))
 
+        #! Done up to here
         # RUN_CFG: Saves running config to file
         if cmds["run_cfg"] != False and data["output_dir"] != None:
             result.append(
@@ -421,35 +422,34 @@ class NornirCommands:
                 pass
             return Result(host=task.host, result="\n".join(result))
 
-
-# ----------------------------------------------------------------------------
-# 2c. Task engine to run either run nornir task for commands or validate
-# ----------------------------------------------------------------------------
-def task_engine(self, run_type: str, data: Dict[str, Any]) -> None:
-    run_type = run_type.replace("_save", "")
-    # Runs the command print or save tasks
-    if run_type != "validate":
-        result = self.nr_inv.run(
-            name=f"{run_type.upper()} command output",
-            task=self.cmd_engine,
-            data=data,
-            run_type=run_type,
-        )
-    # Runs the validate tasks
-    elif run_type == "validate":
-        result = self.nr_inv.run(
-            task=validate_task,
-            input_data=data["input_file"],
-            directory=data["output_dir"],
-        )
-    # Only prints out result if commands commands where run against a device
-    if result[list(result.keys())[0]].result != "Nothing run":
-        # Adds report information (report_text) if nr_validate has been run
-        try:
-            result[list(result.keys())[0]].report_text
-            print_result(result, vars=["result", "report_text"])
-        except:
-            print_result(result, vars=["result"], line_breaks=True)
+    # ----------------------------------------------------------------------------
+    # 2c. Task engine to run nornir task for commands and prints result
+    # ----------------------------------------------------------------------------
+    def task_engine(self, run_type: str, data: Dict[str, Any]) -> None:
+        run_type = run_type.replace("_save", "")
+        # Runs the command print or save tasks
+        if run_type != "validate":
+            result = self.nr_inv.run(
+                name=f"{run_type.upper()} command output",
+                task=self.cmd_engine,
+                data=data,
+                run_type=run_type,
+            )
+        # # Runs the validate tasks, for future
+        # elif run_type == "validate":
+        #     result = self.nr_inv.run(
+        #         task=validate_task,
+        #         input_data=data["input_file"],
+        #         directory=data["output_dir"],
+        #     )
+        # Only prints out result if commands where run against a device
+        if result[list(result.keys())[0]].result != "Nothing run":
+            # Adds report information (report_text) if nr_validate has been run
+            try:
+                result[list(result.keys())[0]].report_text
+                print_result(result, vars=["result", "report_text"])
+            except:
+                print_result(result, vars=["result"], line_breaks=True)
 
 
 # ----------------------------------------------------------------------------
@@ -481,26 +481,21 @@ def main():
 
     # 6a. Validate directories and files exist for compare
     if run_type == "compare":
-        result = input_val.val_compare_arg(run_type, file_path)
+        data = input_val.val_compare_arg(run_type, file_path)
     elif run_type != None:
-        result = input_val.val_noncompare_arg(run_type, file_path)
-    # ipdb.set_trace()
-    # from pprint import pprint
+        data = input_val.val_noncompare_arg(run_type, file_path)
+
+    #
 
     # pprint(result)
 
-    #! Done upto here,
+    # 7. Run the nornir tasks dependant on the run type (runtime flag)
+    nr_cmd = NornirCommands(nr_inv)
+    nr_cmd.task_engine(run_type, data)
 
-
-#! once here can do all unit tests for class InputValidate
 
 #   user: test_user
 #   pword: L00K_pa$$w0rd_github!
-
-# # 7. Run the nornir tasks dependant on the run type (runtime flag)
-# nr_cmd = NornirCommands(nr_inv)
-# nr_cmd.task_engine(run_type, data)
-
 
 # INPUT_FILE: Sets input file based on if is command checks or validate
 # elif run_type == "validate":

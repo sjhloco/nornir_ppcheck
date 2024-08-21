@@ -29,27 +29,27 @@ def load_input_validate():
     input_val = InputValidate(test_directory)
 
 
-# @pytest.fixture(scope="class")
-# def load_nornir_inventory():
-#     global input_data, nr_inv, nr_cmd
-#     with open(os.path.join(input_fldr, "input_cmd.yml"), "r") as file_content:
-#         input_data = yaml.load(file_content, Loader=yaml.FullLoader)
-#     nr_inv = InitNornir(
-#         inventory={
-#             "plugin": "SimpleInventory",
-#             "options": {
-#                 "host_file": os.path.join(test_inventory, "hosts.yml"),
-#                 "group_file": os.path.join(test_inventory, "groups.yml"),
-#             },
-#         }
-#     )
-#     nr_cmd = NornirCommands(nr_inv)
-#     # creates a temp folder to save output files
-#     if not os.path.exists(output_fldr):
-#         os.mkdir(output_fldr)
-#     yield output_fldr
-#     if os.path.exists(output_fldr):
-#         shutil.rmtree(output_fldr)
+@pytest.fixture(scope="class")
+def load_nornir_inventory():
+    global input_data, nr_inv, nr_cmd
+    with open(os.path.join(working_dir, "input_cmd.yml"), "r") as file_content:
+        input_data = yaml.load(file_content, Loader=yaml.FullLoader)
+    nr_inv = InitNornir(
+        inventory={
+            "plugin": "SimpleInventory",
+            "options": {
+                "host_file": os.path.join(test_inventory, "hosts.yml"),
+                "group_file": os.path.join(test_inventory, "groups.yml"),
+            },
+        }
+    )
+    nr_cmd = NornirCommands(nr_inv)
+    # creates a temp folder to save output files
+    if not os.path.exists(output_fldr):
+        os.mkdir(output_fldr)
+    yield output_fldr
+    if os.path.exists(output_fldr):
+        shutil.rmtree(output_fldr)
 
 
 # ----------------------------------------------------------------------------
@@ -212,35 +212,40 @@ class TestInputValidate:
 # ----------------------------------------------------------------------------
 # 2. NR_CMDs: Testing of Nornir interactions
 # ----------------------------------------------------------------------------
-# @pytest.mark.usefixtures("load_nornir_inventory")
-# class TestNornirCommands:
+@pytest.mark.usefixtures("load_nornir_inventory")
+class TestNornirCommands:
 
-#     # 2a Testing method for to getting list of print commands
-#     def test_organise_cmds_print(self):
-#         err_msg = "❌ organise_cmds: Creating a list of print commands failed"
-#         desired_result = ["show history", "show hosts", "show run | in hostn"]
-#         actual_result = nr_inv.run(
-#             task=nr_cmd.organise_cmds, input_data=input_data, cmd_dict="cmd_print"
-#         )
-#         assert actual_result["TEST_HOST"].result == desired_result, err_msg
+    # 2a Method run by test_get_cmds
+    def meth_test_get_cmds(self, inv, ds_cmds):
+        err_msg = f"❌ get_cmds: Creating dict of '{inv}' commands from input file fail"
+        cmds = dict(print=[], vital=[], detail=[], run_cfg=False)
+        desired_result = yaml.load(str(ds_cmds).replace("cmd_", ""), Loader=yaml.Loader)
+        desired_result["run_cfg"] = False + ds_cmds.get("run_cfg", False)
+        nr_cmd.get_cmds(cmds, ds_cmds)
+        assert nr_cmd.cmds == desired_result, err_msg
 
-#     # 2b Testing method for to getting list of print commands
-#     def test_organise_cmds_vital(self):
-#         err_msg = "❌ organise_cmds: Creating a list of vital commands failed"
-#         desired_result = ["show flash", "show vrf", "show arp"]
-#         actual_result = nr_inv.run(
-#             task=nr_cmd.organise_cmds, input_data=input_data, cmd_dict="cmd_vital"
-#         )
-#         assert actual_result["TEST_HOST"].result == desired_result, err_msg
+    # Test gathering of commands for each section (hosts, groups, all) and run_cfg from input file
+    def test_get_cmds(self):
+        self.meth_test_get_cmds("hosts", input_data["hosts"]["TEST_HOST"])
+        self.meth_test_get_cmds("groups", input_data["groups"]["ios"])
+        self.meth_test_get_cmds("all", input_data["all"])
 
-#     # 2c Testing method for to getting list of print commands
-#     def test_organise_cmds_detail(self):
-#         err_msg = "❌ organise_cmds: Creating a list of detail commands failed"
-#         desired_result = ["show history", "show run", "show boot"]
-#         actual_result = nr_inv.run(
-#             task=nr_cmd.organise_cmds, input_data=input_data, cmd_dict="cmd_detail"
-#         )
-#         assert actual_result["TEST_HOST"].result == desired_result, err_msg
+    # 2b. Method run by test_organise_cmds
+    def meth_test_organise_cmds(self, cmd_type, actual_result, desired_result):
+        err_msg = f"❌ organise_cmds: Creating a list of '{cmd_type}' commands failed"
+        assert actual_result["TEST_HOST"].result[cmd_type] == desired_result, err_msg
+
+    # Test merging of commands for each test type (print, vital, detail, run_cfg) from all sections
+    def test_organise_cmds(self):
+        actual_result = nr_inv.run(task=nr_cmd.organise_cmds, input_data=input_data)
+        desired_result = ["show history", "show hosts", "show run | in hostn"]
+        self.meth_test_organise_cmds("print", actual_result, desired_result)
+        desired_result = ["show flash", "show vrf", "show arp"]
+        self.meth_test_organise_cmds("vital", actual_result, desired_result)
+        desired_result = ["show history", "show run", "show boot"]
+        self.meth_test_organise_cmds("detail", actual_result, desired_result)
+        self.meth_test_organise_cmds("run_cfg", actual_result, ["show running-config"])
+
 
 #     # 2d Testing method for gathering command output to print to screen
 #     def test_run_cmds_print(self):

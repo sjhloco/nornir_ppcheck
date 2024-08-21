@@ -15,6 +15,7 @@ groups:
     cmd_detail:
       - show run
 all:
+  run_cfg: True
   cmd_print:
     - show history
   cmd_vital:
