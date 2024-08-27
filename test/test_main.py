@@ -8,6 +8,7 @@ from unittest.mock import patch
 import nornir_inv
 from main import InputValidate
 from main import NornirCommands
+from main import NornirEngine
 
 
 # ----------------------------------------------------------------------------
@@ -31,7 +32,7 @@ def load_input_validate():
 
 @pytest.fixture(scope="class")
 def load_nornir_inventory():
-    global input_data, nr_inv, nr_cmd
+    global input_data, nr_inv
     with open(os.path.join(working_dir, "input_cmd.yml"), "r") as file_content:
         input_data = yaml.load(file_content, Loader=yaml.FullLoader)
     nr_inv = InitNornir(
@@ -43,7 +44,14 @@ def load_nornir_inventory():
             },
         }
     )
-    nr_cmd = NornirCommands(nr_inv)
+
+    # Need a nornir task to instinize NornirCommands
+    def tst_engine(task):
+        global nr_cmd
+        nr_cmd = NornirCommands(task)
+
+    nr_inv.run(task=tst_engine)
+
     # creates a temp folder to save output files
     if not os.path.exists(output_fldr):
         os.mkdir(output_fldr)
@@ -233,11 +241,15 @@ class TestNornirCommands:
     # 2b. Method run by test_organise_cmds
     def meth_test_organise_cmds(self, cmd_type, actual_result, desired_result):
         err_msg = f"❌ organise_cmds: Creating a list of '{cmd_type}' commands failed"
-        assert actual_result["TEST_HOST"].result[cmd_type] == desired_result, err_msg
+        assert actual_result[cmd_type] == desired_result, err_msg
+        # ? Delete later once happy with split as cant run nornir tasks independently anymore
+        # assert actual_result["TEST_HOST"].result[cmd_type] == desired_result, err_msg
 
     # Test merging of commands for each test type (print, vital, detail, run_cfg) from all sections
     def test_organise_cmds(self):
-        actual_result = nr_inv.run(task=nr_cmd.organise_cmds, input_data=input_data)
+        actual_result = nr_cmd.organise_cmds(input_data)
+        # ? Delete later once happy with split as cant run nornir tasks independently anymore
+        # actual_result = nr_inv.run(task=nr_cmd.organise_cmds, input_data=input_data)
         desired_result = ["show history", "show hosts", "show run | in hostn"]
         self.meth_test_organise_cmds("print", actual_result, desired_result)
         desired_result = ["show flash", "show vrf", "show arp"]
@@ -246,19 +258,27 @@ class TestNornirCommands:
         self.meth_test_organise_cmds("detail", actual_result, desired_result)
         self.meth_test_organise_cmds("run_cfg", actual_result, ["show running-config"])
 
+    # 2c. Test creating difference between files
+    def test_create_diff(self):
+        diff_file = os.path.join(working_dir, "AZ-ASR-WAN01_diff_vital.html")
+        data = dict(
+            cmp_file1=os.path.join(working_dir, "AZ-ASR-WAN01_vital-comp1.txt"),
+            cmp_file2=os.path.join(working_dir, "AZ-ASR-WAN01_vital-comp2.txt"),
+            output_fldr=output_fldr,
+        )
+        # Test returned stdout message correct
+        err_msg = f"❌ create_diff: Creating test diff file AZ-ASR-WAN01_diff_vital.html failed"
+        actual_result = nr_cmd.create_diff(data)
+        desired_result = f"✅ Created compare HTML file '{os.path.join(output_fldr, 'AZ-ASR-WAN01_diff_vital-comp1.html')}'"
+        assert actual_result == desired_result, err_msg
+        # Test created diff file is correct
+        err_msg = f"❌ create_diff: Created diff file AZ-ASR-WAN01_diff_vital-comp1.html failed tests"
+        desired_result = open(diff_file).readlines()
+        actual_result = open(
+            os.path.join(output_fldr, "AZ-ASR-WAN01_diff_vital-comp1.html")
+        ).readlines()
+        assert actual_result == desired_result, err_msg
 
-#     # 2d Testing method for gathering command output to print to screen
-#     def test_run_cmds_print(self):
-#         err_msg = "❌ run_cmds: Nornir running 'print' commands failed"
-#         desired_result = "hostname HME-C3560-SWI01"
-#         actual_result = nr_inv.run(
-#             name=f"{'print'.capitalize()} command output",
-#             task=nr_cmd.run_cmds,
-#             sev_level=logging.INFO,
-#             data=dict(input_data=input_data),
-#             run_type="print",
-#         )
-#         assert actual_result["TEST_HOST"][3].result == desired_result, err_msg
 
 #     # 2e Testing method for gathering vital command output to save to file
 #     def test_run_cmds_vital(self, capsys):

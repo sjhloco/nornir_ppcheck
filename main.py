@@ -196,7 +196,7 @@ class InputValidate:
         return run_type, file_path
 
     # ----------------------------------------------------------------------------
-    # 1d. If compare arg validates all the files exist (a list of 3 elements, output_dir & 2 compare files)
+    # 1d. If compare arg validates all the files exist (a list of 3 elements, output_fldr & 2 compare files)
     # ----------------------------------------------------------------------------
     def val_compare_arg(self, run_type: str, file_path: list) -> Dict[str, Any]:
         missing_files = []
@@ -236,8 +236,9 @@ class InputValidate:
 # 2. Uses nornir to run commands
 # ----------------------------------------------------------------------------
 class NornirCommands:
-    def __init__(self, nr_inv: "nornir"):
-        self.nr_inv = nr_inv
+    def __init__(self, task: "nornir"):
+        # breakpoint()
+        self.task = task
 
     # ----------------------------------------------------------------------------
     # CMDS: Creates a dictionary of the commands
@@ -247,40 +248,39 @@ class NornirCommands:
         cmds["print"].extend(input_data.get("cmd_print", []))
         cmds["vital"].extend(input_data.get("cmd_vital", []))
         cmds["detail"].extend(input_data.get("cmd_detail", []))
-        self.cmds = cmds        # Needed so can unittest this method as no return
+        self.cmds = cmds  # Needed so can unittest this method as no return
 
     # ----------------------------------------------------------------------------
     # 2a. ORG_CMD: Filters the commands based on the host got from nornir task
     # ----------------------------------------------------------------------------
-    def organise_cmds(self, task: "task", input_data: Dict[str, Any]) -> list:
+    def organise_cmds(self, input_data: Dict[str, Any]) -> list:
         cmds = dict(print=[], vital=[], detail=[], run_cfg=False)
         # If run_cfg is set gathers and saves that first before getting the rest of commands
         if input_data.get("all") != None:
             self.get_cmds(cmds, input_data["all"])
         if input_data.get("groups") != None:
             for each_grp in input_data["groups"]:
-                if each_grp in task.host.groups:
+                if each_grp in self.task.host.groups:
                     self.get_cmds(cmds, input_data["groups"][each_grp])
         if input_data.get("hosts") != None:
             for each_hst in input_data["hosts"]:
                 if (
-                    each_hst.lower() == str(task.host).lower()
-                    or each_hst.lower() == str(task.host.hostname).lower()
+                    each_hst.lower() == str(self.task.host).lower()
+                    or each_hst.lower() == str(self.task.host.hostname).lower()
                 ):
                     self.get_cmds(cmds, input_data["hosts"][each_hst])
         if cmds["run_cfg"] == True:
             cmds["run_cfg"] = ["show running-config"]
         return cmds
-        # ! do unit tests
 
     # ----------------------------------------------------------------------------
-    # RUN_CMD: Runs a list of commands on a device
+    # RUN_CMD: Runs a nornir task that executes a list of commands on a device
     # ----------------------------------------------------------------------------
-    def run_cmds(self, task: "task", cmd: List, sev_level: "logging") -> str:
+    def run_cmds(self, cmd: List, sev_level: "logging") -> str:
         all_output = ""
         for each_cmd in cmd:
             output = "==== " + each_cmd + " " + "=" * (79 - len(each_cmd)) + "\n"
-            cmd_output = task.run(
+            cmd_output = self.task.run(
                 name=each_cmd,
                 task=netmiko_send_command,
                 command_string=each_cmd,
@@ -290,21 +290,13 @@ class NornirCommands:
         return all_output
 
     # ----------------------------------------------------------------------------
-    # SAVE_CMD: Saves the contents to file
+    # SAVE_CMD: Runs a nornir task to save cmd output (gathered by diff method) to file
     # ----------------------------------------------------------------------------
-    def save_cmds(
-        self, task: "task", run_type: str, data: Dict[str, Any], output: str
-    ) -> str:
-        output_file = os.path.join(
-            data["output_dir"],
-            str(task.host)
-            + "_"
-            + run_type
-            + "_"
-            + datetime.now().strftime("%Y%m%d-%H%M")
-            + ".txt",
-        )
-        task.run(
+    def save_cmds(self, run_type: str, data: Dict[str, Any], output: str) -> str:
+        date = datetime.now().strftime("%Y%m%d-%H%M")
+        file_name = str(self.task.host) + "_" + run_type + "_" + date + ".txt"
+        output_file = os.path.join(data["output_fldr"], file_name)
+        self.task.run(
             task=write_file,
             filename=output_file,
             content=output,
@@ -315,19 +307,18 @@ class NornirCommands:
     # ----------------------------------------------------------------------------
     # PRINT_CMD: Runs and prints the command outputs to screen
     # ----------------------------------------------------------------------------
-    def run_print_cmd(self, task: "task", cmds: List) -> None:
+    def run_print_cmd(self, cmds: List) -> None:
         if len(cmds) != 0:
-            self.run_cmds(task, cmds, logging.INFO)
+            self.run_cmds(cmds, logging.INFO)
 
     # ----------------------------------------------------------------------------
-    # SAVE_CMD: Runs and saves the command outputs to file
+    # SAVE_CMD: Uses separate methods to runs and save the command outputs to file
     # ----------------------------------------------------------------------------
-    def run_save_cmd(
-        self, task: "task", run_type: str, data: Dict[str, Any], cmds: List
-    ) -> str:
+    def run_save_cmd(self, run_type: str, data: Dict[str, Any], cmds: List) -> str:
+
         if len(cmds) != 0:
-            output = self.run_cmds(task, cmds, logging.DEBUG)
-            output_file = self.save_cmds(task, run_type, data, output)
+            output = self.run_cmds(cmds, logging.DEBUG)
+            output_file = self.save_cmds(run_type, data, output)
             return f"✅ Created command output file '{output_file}'"
         return "empty"
 
@@ -335,30 +326,44 @@ class NornirCommands:
     # DIFF: Create HTML diff file from 2 input files
     # ----------------------------------------------------------------------------
     def create_diff(self, data: Dict[str, Any]) -> str:
-        pre = open(data["cmp_file1"]).readlines()
-        post = open(data["cmp_file2"]).readlines()
+        # Create file names and load compare files
         pre_file_name = data["cmp_file1"].split("/")[-1]
         post_file_name = data["cmp_file2"].split("/")[-1]
-        file_name = pre_file_name.split("_")[0] + "_diff_" + pre_file_name.split("_")[1]
-        output_file = os.path.join(data["output_dir"], file_name + ".html")
-
-        delta = difflib.HtmlDiff().make_file(pre, post, pre_file_name, post_file_name)
+        file_name = (
+            pre_file_name.split("_")[0]
+            + "_diff_"
+            + pre_file_name.split("_")[1].replace(".txt", "")
+        )
+        output_file = os.path.join(data["output_fldr"], file_name + ".html")
+        pre = open(data["cmp_file1"]).readlines()
+        post = open(data["cmp_file2"]).readlines()
+        # Create diff html page with a reduced font size in the html table
+        diff = difflib.HtmlDiff().make_file(pre, post, pre_file_name, post_file_name)
+        diff_font = diff.replace("   <tbody>", '   <tbody style="font-size:12px">')
         with open(output_file, "w") as f:
-            f.write(delta)
+            f.write(diff_font)
         return f"✅ Created compare HTML file '{output_file}'"
 
-    # ----------------------------------------------------------------------------
-    # GET_CMP_FILES: Gets last 2 files and compars them
-    # ----------------------------------------------------------------------------
-    def post_create_diff(self, hostname: str, file_type: str, output_dir: str) -> str:
-        file_filter = os.path.join(output_dir, hostname + "_" + file_type + "*")
-        files = glob.glob(file_filter)
-        files.sort(reverse=True)
-        if len(files) >= 2:
-            data = dict(output_dir=output_dir, cmp_file1=files[1], cmp_file2=files[0])
-            return self.create_diff(data)
-        else:
-            return f"❌ Only {len(files)} file matched the filter '{file_filter}' for files to be compared"
+    # # ----------------------------------------------------------------------------
+    # # GET_CMP_FILES: Gets last 2 files and compars them
+    # # ----------------------------------------------------------------------------
+    # def post_create_diff(self, hostname: str, file_type: str, output_fldr: str) -> str:
+    #     file_filter = os.path.join(output_fldr, hostname + "_" + file_type + "*")
+    #     files = glob.glob(file_filter)
+    #     files.sort(reverse=True)
+    #     if len(files) >= 2:
+    #         data = dict(output_fldr=output_fldr, cmp_file1=files[1], cmp_file2=files[0])
+    #         return self.create_diff(data)
+    #     else:
+    #         return f"❌ Only {len(files)} file matched the filter '{file_filter}' for files to be compared"
+
+
+# ----------------------------------------------------------------------------
+# 2. Uses nornir to run commands
+# ----------------------------------------------------------------------------
+class NornirEngine:
+    def __init__(self, nr_inv: "nornir"):
+        self.nr_inv = nr_inv
 
     # ----------------------------------------------------------------------------
     # 2b. Command engine runs the sub-tasks to get commands and possibly save results to file
@@ -366,43 +371,44 @@ class NornirCommands:
     def cmd_engine(
         self, task: "task", data: Dict[str, Any], run_type: str
     ) -> "MultiResult":
+        self.nr_cmd = NornirCommands(task)
         result, empty_result = ([] for i in range(2))
-        cmds = self.organise_cmds(task, data.get("input_data", {}))
+        cmds = self.nr_cmd.organise_cmds(data.get("input_data", {}))
 
-        #! Done up to here
         # RUN_CFG: Saves running config to file
-        if cmds["run_cfg"] != False and data["output_dir"] != None:
+        if cmds["run_cfg"] != False and data["output_fldr"] != None:
             result.append(
-                self.run_save_cmd(task, "running-config", data, cmds["run_cfg"])
+                self.nr_cmd.run_save_cmd("running-config", data, cmds["run_cfg"])
             )
         # PRT: Prints command output to screen
         if run_type == "print":
-            self.run_print_cmd(task, cmds["print"])
+            self.nr_cmd.run_print_cmd(cmds["print"])
         # VTL_DTL: Saves vital or detail commands to file
         elif run_type == "vital" or run_type == "detail":
-            result.append(self.run_save_cmd(task, run_type, data, cmds[run_type]))
+            result.append(self.nr_cmd.run_save_cmd(run_type, data, cmds[run_type]))
+        # ipdb.set_trace()
         # CMP: Compares 2 specified files
         elif run_type == "compare":
-            result.append(self.create_diff(data))
-
-        # PRE: Prints cmds to screen and saves vital or detail commands to file
-        elif run_type == "pre_test":
-            self.run_print_cmd(task, cmds["print"])
-            result.append(self.run_save_cmd(task, "vital", data, cmds["vital"]))
-            result.append(self.run_save_cmd(task, "detail", data, cmds["detail"]))
-        # POST: Prints cmds to screen, saves vital commands to file, compares 2 latest vital and run-cfg
-        elif run_type == "post_test":
-            self.run_print_cmd(task, cmds["print"])
-            result.append(self.run_save_cmd(task, "vital", data, cmds["vital"]))
-            result.append(
-                self.post_create_diff(str(task.host), "vital", data["output_dir"])
-            )
-            if cmds["run_cfg"] != False:
-                result.append(
-                    self.post_create_diff(
-                        str(task.host), "running-config", data["output_dir"]
-                    )
-                )
+            result.append(self.nr_cmd.create_diff(data))
+        #! Done up to here, do rest and look what can unit test
+        # # PRE: Prints cmds to screen and saves vital or detail commands to file
+        # elif run_type == "pre_test":
+        #     self.run_print_cmd(task, cmds["print"])
+        #     result.append(self.run_save_cmd(task, "vital", data, cmds["vital"]))
+        #     result.append(self.run_save_cmd(task, "detail", data, cmds["detail"]))
+        # # POST: Prints cmds to screen, saves vital commands to file, compares 2 latest vital and run-cfg
+        # elif run_type == "post_test":
+        #     self.run_print_cmd(task, cmds["print"])
+        #     result.append(self.run_save_cmd(task, "vital", data, cmds["vital"]))
+        #     result.append(
+        #         self.post_create_diff(str(task.host), "vital", data["output_fldr"])
+        #     )
+        #     if cmds["run_cfg"] != False:
+        #         result.append(
+        #             self.post_create_diff(
+        #                 str(task.host), "running-config", data["output_fldr"]
+        #             )
+        #         )
 
         # RESULT: Prints warning if no commands (for pre and post test) and/or file location for any saved files
         for each_type in ["print", "vital", "detail"]:
@@ -440,7 +446,7 @@ class NornirCommands:
         #     result = self.nr_inv.run(
         #         task=validate_task,
         #         input_data=data["input_file"],
-        #         directory=data["output_dir"],
+        #         directory=data["output_fldr"],
         #     )
         # Only prints out result if commands where run against a device
         if result[list(result.keys())[0]].result != "Nothing run":
@@ -490,16 +496,16 @@ def main():
     # pprint(result)
 
     # 7. Run the nornir tasks dependant on the run type (runtime flag)
-    nr_cmd = NornirCommands(nr_inv)
-    nr_cmd.task_engine(run_type, data)
+
+    # nr_cmd = NornirCommands(nr_inv)
+    # nr_cmd.task_engine(run_type, data)
+    nr_eng = NornirEngine(nr_inv)
+    nr_eng.task_engine(run_type, data)
 
 
 #   user: test_user
 #   pword: L00K_pa$$w0rd_github!
 
-# INPUT_FILE: Sets input file based on if is command checks or validate
-# elif run_type == "validate":
-#     input_filename = input_val_file
 
 if __name__ == "__main__":
     main()

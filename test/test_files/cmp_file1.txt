@@ -20,6 +20,3 @@ connected       0           4           0           416         1248
 static          1           0           0           104         312
 internal        2                                               1064
 Total           3           4           0           520         2624
-
-
-
