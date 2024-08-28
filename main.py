@@ -34,7 +34,7 @@ inventory = "inventory"  # Location of the nornir inventory file
 device_user = "test_user"  # Default device username
 output_folder = "output"  # Folder that stores reports and output saved to file
 input_cmd_file = "input_cmd.yml"  # Commands to be run, is in project folder
-# input_val_file = "input_val.yml"      # For future validate
+# input_val_file = "input_val.yml"      # TBD: For future use with nornir_validate
 
 
 # ----------------------------------------------------------------------------
@@ -128,7 +128,7 @@ class InputValidate:
             "--detail_save",
             help="Name of change directory where to save files created from detail command outputs",
         )
-        ## TBD: May add validate in future
+        # TBD: For future use with nornir_validate
         # args.add_argument(
         #     "-val",
         #     "--validate",
@@ -329,12 +329,13 @@ class NornirCommands:
         # Create file names and load compare files
         pre_file_name = data["cmp_file1"].split("/")[-1]
         post_file_name = data["cmp_file2"].split("/")[-1]
-        file_name = (
+        output_file = os.path.join(
+            data["output_fldr"],
             pre_file_name.split("_")[0]
             + "_diff_"
             + pre_file_name.split("_")[1].replace(".txt", "")
+            + ".html",
         )
-        output_file = os.path.join(data["output_fldr"], file_name + ".html")
         pre = open(data["cmp_file1"]).readlines()
         post = open(data["cmp_file2"]).readlines()
         # Create diff html page with a reduced font size in the html table
@@ -386,17 +387,17 @@ class NornirEngine:
         # VTL_DTL: Saves vital or detail commands to file
         elif run_type == "vital" or run_type == "detail":
             result.append(self.nr_cmd.run_save_cmd(run_type, data, cmds[run_type]))
-        # ipdb.set_trace()
         # CMP: Compares 2 specified files
         elif run_type == "compare":
             result.append(self.nr_cmd.create_diff(data))
+
+        # PRE: Prints cmds to screen and saves vital or detail commands to file
+        elif run_type == "pre_test":
+            self.nr_cmd.run_print_cmd(cmds["print"])
+            result.append(self.nr_cmd.run_save_cmd("vital", data, cmds["vital"]))
+            result.append(self.nr_cmd.run_save_cmd("detail", data, cmds["detail"]))
         #! Done up to here, do rest and look what can unit test
-        # # PRE: Prints cmds to screen and saves vital or detail commands to file
-        # elif run_type == "pre_test":
-        #     self.run_print_cmd(task, cmds["print"])
-        #     result.append(self.run_save_cmd(task, "vital", data, cmds["vital"]))
-        #     result.append(self.run_save_cmd(task, "detail", data, cmds["detail"]))
-        # # POST: Prints cmds to screen, saves vital commands to file, compares 2 latest vital and run-cfg
+        # POST: Prints cmds to screen, saves vital commands to file, compares 2 latest vital and run-cfg
         # elif run_type == "post_test":
         #     self.run_print_cmd(task, cmds["print"])
         #     result.append(self.run_save_cmd(task, "vital", data, cmds["vital"]))
@@ -441,7 +442,7 @@ class NornirEngine:
                 data=data,
                 run_type=run_type,
             )
-        # # Runs the validate tasks, for future
+        # TBD: For future use with nornir_validate
         # elif run_type == "validate":
         #     result = self.nr_inv.run(
         #         task=validate_task,
