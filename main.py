@@ -7,24 +7,14 @@ import glob
 import difflib
 import getpass
 from typing import Any, Dict, List
-
 from rich.console import Console
 from rich.theme import Theme
 from nornir.core.task import Result
-
 from nornir_rich.functions import print_result
 from nornir_utils.plugins.tasks.files import write_file
 from nornir_netmiko.tasks import netmiko_send_command
-
 import nornir_inv
 
-import ipdb
-from pprint import pprint
-
-# from nornir_validate.nr_val import validate_task
-
-# from pathlib import Path
-# from nornir_utils.plugins.tasks.data import echo_data
 
 # ----------------------------------------------------------------------------
 # VARIABLES: Hardcoded default variables such as file location or username
@@ -345,18 +335,19 @@ class NornirCommands:
             f.write(diff_font)
         return f"✅ Created compare HTML file '{output_file}'"
 
-    # # ----------------------------------------------------------------------------
-    # # GET_CMP_FILES: Gets last 2 files and compars them
-    # # ----------------------------------------------------------------------------
-    # def post_create_diff(self, hostname: str, file_type: str, output_fldr: str) -> str:
-    #     file_filter = os.path.join(output_fldr, hostname + "_" + file_type + "*")
-    #     files = glob.glob(file_filter)
-    #     files.sort(reverse=True)
-    #     if len(files) >= 2:
-    #         data = dict(output_fldr=output_fldr, cmp_file1=files[1], cmp_file2=files[0])
-    #         return self.create_diff(data)
-    #     else:
-    #         return f"❌ Only {len(files)} file matched the filter '{file_filter}' for files to be compared"
+    # ----------------------------------------------------------------------------
+    # GET_CMP_FILES: Gets last 2 files and compares them
+    # ----------------------------------------------------------------------------
+    def pos_create_diff(self, file_type: str, output_fldr: str) -> str:
+        hostname = str(self.task.host)
+        file_filter = os.path.join(output_fldr, hostname + "_" + file_type + "*")
+        files = glob.glob(file_filter)
+        files.sort(reverse=True)
+        if len(files) >= 2:
+            data = dict(output_fldr=output_fldr, cmp_file1=files[1], cmp_file2=files[0])
+            return self.create_diff(data)
+        else:
+            return f"❌ Only {len(files)} file matched the filter '{file_filter}' for files to be compared"
 
 
 # ----------------------------------------------------------------------------
@@ -378,9 +369,7 @@ class NornirEngine:
 
         # RUN_CFG: Saves running config to file
         if cmds["run_cfg"] != False and data["output_fldr"] != None:
-            result.append(
-                self.nr_cmd.run_save_cmd("running-config", data, cmds["run_cfg"])
-            )
+            result.append(self.nr_cmd.run_save_cmd("config", data, cmds["run_cfg"]))
         # PRT: Prints command output to screen
         if run_type == "print":
             self.nr_cmd.run_print_cmd(cmds["print"])
@@ -391,32 +380,27 @@ class NornirEngine:
         elif run_type == "compare":
             result.append(self.nr_cmd.create_diff(data))
 
-        # PRE: Prints cmds to screen and saves vital or detail commands to file
-        elif run_type == "pre_test":
+        # PRE/POST: Prints cmds to screen and saves vital commands to file
+        else:
             self.nr_cmd.run_print_cmd(cmds["print"])
             result.append(self.nr_cmd.run_save_cmd("vital", data, cmds["vital"]))
-            result.append(self.nr_cmd.run_save_cmd("detail", data, cmds["detail"]))
-        #! Done up to here, do rest and look what can unit test
-        # POST: Prints cmds to screen, saves vital commands to file, compares 2 latest vital and run-cfg
-        # elif run_type == "post_test":
-        #     self.run_print_cmd(task, cmds["print"])
-        #     result.append(self.run_save_cmd(task, "vital", data, cmds["vital"]))
-        #     result.append(
-        #         self.post_create_diff(str(task.host), "vital", data["output_fldr"])
-        #     )
-        #     if cmds["run_cfg"] != False:
-        #         result.append(
-        #             self.post_create_diff(
-        #                 str(task.host), "running-config", data["output_fldr"]
-        #             )
-        #         )
+            # PRE: saves vital commands to file
+            if run_type == "pre_test":
+                result.append(self.nr_cmd.run_save_cmd("detail", data, cmds["detail"]))
+            # POST: Compares 2 latest vital and config
+            elif run_type == "post_test":
+                result.append(self.nr_cmd.pos_create_diff("vital", data["output_fldr"]))
+                if cmds["run_cfg"] != False:
+                    result.append(
+                        self.nr_cmd.pos_create_diff("config", data["output_fldr"])
+                    )
 
         # RESULT: Prints warning if no commands (for pre and post test) and/or file location for any saved files
         for each_type in ["print", "vital", "detail"]:
             if len(cmds[each_type]) == 0:
                 empty_result.append(each_type)
         if cmds["run_cfg"] == False:
-            empty_result.append("running-config")
+            empty_result.append("config")
         if len(empty_result) != 0:
             if run_type == "pre_test" or run_type == "post_test":
                 empties = ", ".join(list(empty_result))
@@ -434,7 +418,7 @@ class NornirEngine:
     # ----------------------------------------------------------------------------
     def task_engine(self, run_type: str, data: Dict[str, Any]) -> None:
         run_type = run_type.replace("_save", "")
-        # Runs the command print or save tasks
+        # The parent nornir task in which the cmd_engine tuns the nornir sub-tasks
         if run_type != "validate":
             result = self.nr_inv.run(
                 name=f"{run_type.upper()} command output",
@@ -470,42 +454,31 @@ def main():
     tmp_args = input_val.add_arg_parser(build_inv)
     args = vars(tmp_args.parse_args())
 
-    # 2. Loads inventory using static host and group files (checks first if location changed with env vars)
+    # 2. Get the run type (flag used)
+    run_type, file_path = input_val.get_run_type(args)
+
+    # 3a. CMP: Validate directories and files exist, doesn't need device creds
+    if run_type == "compare":
+        data = input_val.val_compare_arg(run_type, file_path)
+        device = dict(user=None, pword=None)
+        # 3b. OTHER: Validates the input file exists, is correct format and gets device creds
+    elif run_type != None:
+        data = input_val.val_noncompare_arg(run_type, file_path)
+        device = input_val.get_user_pass(args)
+
+    # 4. Loads inventory using static host and group files (checks first if location changed with env vars)
     nr_inv = build_inv.load_inventory(
         os.path.join(os.environ.get("INVENTORY", inventory), "hosts.yml"),
         os.path.join(os.environ.get("INVENTORY", inventory), "groups.yml"),
     )
 
-    # 3. Filter the inventory based on the runtime flags
+    # 5. Filter the inventory based on the runtime flags and add creds to Nornir inventory defaults
     nr_inv = build_inv.filter_inventory(args, nr_inv)
-
-    # 4. Add username and password to Nornir inventory defaults
-    device = input_val.get_user_pass(args)
     nr_inv = build_inv.inventory_defaults(nr_inv, device)
 
-    # 5. Get the run type (flag used) and validate the input file
-    run_type, file_path = input_val.get_run_type(args)
-
-    # 6a. Validate directories and files exist for compare
-    if run_type == "compare":
-        data = input_val.val_compare_arg(run_type, file_path)
-    elif run_type != None:
-        data = input_val.val_noncompare_arg(run_type, file_path)
-
-    #
-
-    # pprint(result)
-
-    # 7. Run the nornir tasks dependant on the run type (runtime flag)
-
-    # nr_cmd = NornirCommands(nr_inv)
-    # nr_cmd.task_engine(run_type, data)
+    # 6. Run the nornir tasks dependant on the run type (runtime flag)
     nr_eng = NornirEngine(nr_inv)
     nr_eng.task_engine(run_type, data)
-
-
-#   user: test_user
-#   pword: L00K_pa$$w0rd_github!
 
 
 if __name__ == "__main__":

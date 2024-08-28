@@ -1,4 +1,0 @@
-hosts:
-  TEST_HOST:
-    ospf_nbr:
-      nbrs: [192.168.255.1, 2.2.2.2]

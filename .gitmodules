@@ -1,3 +1,0 @@
-[submodule "nornir_validate"]
-	path = nornir_validate
-	url = https://github.com/sjhloco/nornir_validate

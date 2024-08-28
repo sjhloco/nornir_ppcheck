@@ -5,7 +5,6 @@ hosts:
       - show clock
       - show ip int brief
       - show interface status
-      - show ip route vrf BLU
       - show ip route
       - show bgp all summary
 #   HME-SWI-VSS01:
@@ -23,22 +22,28 @@ hosts:
 #     cmd_detail:
 #       - show int status
 
-# groups:
-#   ios:
-#     # run_cfg: True
-#     cmd_print:
-#       - show bgp all summary
-#     cmd_vital:
-#       - show clock
-#     cmd_detail:
-#       - show ip ospf database
+groups:
+  ios:
+    # run_cfg: True
+    cmd_print:
+      - show bgp all summary
+    cmd_vital:
+      - show clock
+    cmd_detail:
+      - show ip ospf database
 
 
 all:
-  # run_cfg: True
-  # cmd_print:
-  #   - show etherchannel summary
+  run_cfg: True
+  cmd_print:
+    - show clock
+    - show ip int brief
+    - show ip route
+    - show bgp all summary
   cmd_vital:
-    - show ntp associations
-  # cmd_detail:
-  #   - show bgp all
+    - show ip int brief
+    - show ip arp summary
+    - show ip route summary
+  cmd_detail:
+    - show ip arp
+    - show ip route

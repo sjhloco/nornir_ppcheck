@@ -39,7 +39,7 @@ INVENTORY="inventory"
 DEVICE_USER="test_user"
 DEVICE_PWORD="blahblah"
 ```
-
+Gotchas, denv var errors (dquote) when try ! and $$ changes to numbers
 ## Input commands *(input_cmd.yml)*
 
 The file is structured around 3 optional dictionaries (must have at least 1 of them) that hold the commands to print (*cmd_print*), vital commands to save (*cmd_vital*) and detail commands to save (*cmd_detail*). Each set is merged into a per-host list at run time.
@@ -82,7 +82,7 @@ all:
 ```
 
 !!!!!!!!!! Done up to here !!!!!!!!!!!!!
-
+FILE names get time added so give it a minute between runnung pre and pso
 
 
 
