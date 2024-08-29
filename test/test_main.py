@@ -1,14 +1,12 @@
 import pytest
 import os
 import yaml
-from nornir import InitNornir
-import logging
 import shutil
-from unittest.mock import patch
 import nornir_inv
+from unittest.mock import patch
+from nornir import InitNornir
 from main import InputValidate
 from main import NornirCommands
-from main import NornirEngine
 
 
 # ----------------------------------------------------------------------------
@@ -51,8 +49,7 @@ def load_nornir_inventory():
         nr_cmd = NornirCommands(task)
 
     nr_inv.run(task=tst_engine)
-
-    # creates a temp folder to save output files
+    # creates a temp folder to save output files then deletes afterwards
     if not os.path.exists(output_fldr):
         os.mkdir(output_fldr)
     yield output_fldr
@@ -234,7 +231,7 @@ class TestNornirCommands:
 
     # Test gathering of commands for each section (hosts, groups, all) and run_cfg from input file
     def test_get_cmds(self):
-        self.meth_test_get_cmds("hosts", input_data["hosts"]["TEST_HOST"])
+        self.meth_test_get_cmds("hosts", input_data["hosts"]["R1"])
         self.meth_test_get_cmds("groups", input_data["groups"]["ios"])
         self.meth_test_get_cmds("all", input_data["all"])
 
@@ -242,14 +239,10 @@ class TestNornirCommands:
     def meth_test_organise_cmds(self, cmd_type, actual_result, desired_result):
         err_msg = f"❌ organise_cmds: Creating a list of '{cmd_type}' commands failed"
         assert actual_result[cmd_type] == desired_result, err_msg
-        # ? Delete later once happy with split as cant run nornir tasks independently anymore
-        # assert actual_result["TEST_HOST"].result[cmd_type] == desired_result, err_msg
 
     # Test merging of commands for each test type (print, vital, detail, run_cfg) from all sections
     def test_organise_cmds(self):
         actual_result = nr_cmd.organise_cmds(input_data)
-        # ? Delete later once happy with split as cant run nornir tasks independently anymore
-        # actual_result = nr_inv.run(task=nr_cmd.organise_cmds, input_data=input_data)
         desired_result = ["show history", "show hosts", "show run | in hostn"]
         self.meth_test_organise_cmds("print", actual_result, desired_result)
         desired_result = ["show flash", "show vrf", "show arp"]
@@ -260,37 +253,32 @@ class TestNornirCommands:
 
     # 2c. Test creating difference between files
     def test_create_diff(self):
-        diff_file = os.path.join(working_dir, "AZ-ASR-WAN01_diff_vital.html")
+        diff_file = os.path.join(working_dir, "R1_diff_vital.html")
         data = dict(
-            cmp_file1=os.path.join(working_dir, "AZ-ASR-WAN01_vital-comp1.txt"),
-            cmp_file2=os.path.join(working_dir, "AZ-ASR-WAN01_vital-comp2.txt"),
+            cmp_file1=os.path.join(working_dir, "R1_vital-comp1.txt"),
+            cmp_file2=os.path.join(working_dir, "R1_vital-comp2.txt"),
             output_fldr=output_fldr,
         )
         # Test returned stdout message correct
-        err_msg = f"❌ create_diff: Creating test diff file AZ-ASR-WAN01_diff_vital.html failed"
+        err_msg = f"❌ create_diff: Creating test diff file R1_diff_vital.html failed"
         actual_result = nr_cmd.create_diff(data)
-        desired_result = f"✅ Created compare HTML file '{os.path.join(output_fldr, 'AZ-ASR-WAN01_diff_vital-comp1.html')}'"
+        desired_result = f"✅ Created compare HTML file '{os.path.join(output_fldr, 'R1_diff_vital-comp1.html')}'"
         assert actual_result == desired_result, err_msg
         # Test created diff file is correct
-        err_msg = f"❌ create_diff: Created diff file AZ-ASR-WAN01_diff_vital-comp1.html failed tests"
+        err_msg = (
+            f"❌ create_diff: Created diff file R1_diff_vital-comp1.html failed tests"
+        )
         desired_result = open(diff_file).readlines()
         actual_result = open(
-            os.path.join(output_fldr, "AZ-ASR-WAN01_diff_vital-comp1.html")
+            os.path.join(output_fldr, "R1_diff_vital-comp1.html")
         ).readlines()
         assert actual_result == desired_result, err_msg
 
-
-#     # 2e Testing method for gathering vital command output to save to file
-#     def test_run_cmds_vital(self, capsys):
-#         err_msg = "❌ run_cmds: Nornir running 'vital' commands failed"
-#         desired_result = "✅ Created command output file '/Users/mucholoco/Documents/Coding/Nornir/code/nornir_checks/test/output/TEST_HOST_"
-#         actual_result = nr_inv.run(
-#             name=f"{'vital'.capitalize()} command output",
-#             task=nr_cmd.run_cmds,
-#             sev_level=logging.DEBUG,
-#             data=dict(input_data=input_data, output_fldr=output_fldr),
-#             run_type="vital",
-#         )
-#         assert (
-#             actual_result["TEST_HOST"][0].result.split("vital")[0] == desired_result
-#         ), err_msg
+    # 2d. Test creating post-check difference between files
+    def test_pos_create_diff(self):
+        # Test failure, so not enough files to compare
+        err_msg = f"❌ pos_create_diff: Test failure, not enough compare files"
+        bad_output_fldr = os.path.join(test_directory, "test_output")
+        actual_result = nr_cmd.pos_create_diff("vital", bad_output_fldr)
+        desired_result = f"❌ Only 0 file matched the filter '{os.path.join(bad_output_fldr, 'R1_vital*')}' for files to be compared"
+        assert actual_result == desired_result, err_msg

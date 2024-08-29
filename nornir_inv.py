@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 import argparse
 import sys
 
@@ -8,6 +8,7 @@ from rich.theme import Theme
 
 
 from nornir import InitNornir
+from nornir.core import Nornir
 from nornir.core.filter import F
 from nornir_rich.functions import print_inventory
 
@@ -23,7 +24,7 @@ class BuildInventory:
     # ----------------------------------------------------------------------------
     # 1. FLAGS: Optional runtime flags to filter inventory and override usernames
     # ----------------------------------------------------------------------------
-    def add_arg_parser(self) -> Dict[str, Any]:
+    def add_arg_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser()
         parser.add_argument(
             "-n",
@@ -74,8 +75,8 @@ class BuildInventory:
         return parser
 
     # LOAD_INV: Creates inventory from static files
-    def load_inventory(self, hosts: str, groups: str) -> "Nornir":
-        nr: "Nornir" = InitNornir(
+    def load_inventory(self, hosts: str, groups: str) -> Nornir:
+        nr: Nornir = InitNornir(
             inventory={
                 "plugin": "SimpleInventory",
                 "options": {"host_file": hosts, "group_file": groups},
@@ -86,7 +87,7 @@ class BuildInventory:
     # ----------------------------------------------------------------------------
     # 2 FILTER_INV: Filters the host in the inventory  based on any arguments passed
     # ----------------------------------------------------------------------------
-    def filter_inventory(self, args: Dict[str, Any], nr: "Nornir") -> "Nornir":
+    def filter_inventory(self, args: dict[str, Any], nr: Nornir) -> Nornir:
         filters = []
         if args.get("hostname") != None:
             list_hosts = args["hostname"].split()
@@ -146,7 +147,7 @@ class BuildInventory:
     # ----------------------------------------------------------------------------
     # 3. DEFAULT_INV: Adds username and password to defaults of the inventory (all devices)
     # ----------------------------------------------------------------------------
-    def inventory_defaults(self, nr: "Nornir", device: Dict[str, Any]) -> "Nornir":
+    def inventory_defaults(self, nr: Nornir, device: dict[str, str]) -> Nornir:
         nr.inventory.defaults.username = device["user"]
         nr.inventory.defaults.password = device["pword"]
 

@@ -9,7 +9,8 @@ import getpass
 from typing import Any, Dict, List
 from rich.console import Console
 from rich.theme import Theme
-from nornir.core.task import Result
+from nornir.core import Nornir
+from nornir.core.task import Result, Task
 from nornir_rich.functions import print_result
 from nornir_utils.plugins.tasks.files import write_file
 from nornir_netmiko.tasks import netmiko_send_command
@@ -20,11 +21,11 @@ import nornir_inv
 # VARIABLES: Hardcoded default variables such as file location or username
 # ----------------------------------------------------------------------------
 working_directory = os.path.dirname(__file__)  # Location of the project folder
-inventory = "inventory"  # Location of the nornir inventory file
-device_user = "test_user"  # Default device username
-output_folder = "output"  # Folder that stores reports and output saved to file
-input_cmd_file = "input_cmd.yml"  # Commands to be run, is in project folder
-# input_val_file = "input_val.yml"      # TBD: For future use with nornir_validate
+inventory: str = "inventory"  # Location of the nornir inventory file
+device_user: str = "test_user"  # Default device username
+output_folder: str = "output"  # Folder that stores reports and output saved to file
+input_cmd_file: str = "input_cmd.yml"  # Commands to be run, is in project folder
+# input_val_file: str = "input_val.yml"      # TBD: For future use with nornir_validate
 
 
 # ----------------------------------------------------------------------------
@@ -146,7 +147,6 @@ class InputValidate:
     # 1b. Gathers username/password checking various input options
     # ----------------------------------------------------------------------------
     def get_user_pass(self, args: Dict[str, Any]) -> Dict[str, str]:
-
         # USER: Check for username in this order: args, env var, var, prompt
         device = {}
         if args.get("username") != None:
@@ -226,8 +226,7 @@ class InputValidate:
 # 2. Uses nornir to run commands
 # ----------------------------------------------------------------------------
 class NornirCommands:
-    def __init__(self, task: "nornir"):
-        # breakpoint()
+    def __init__(self, task: Task):
         self.task = task
 
     # ----------------------------------------------------------------------------
@@ -241,7 +240,7 @@ class NornirCommands:
         self.cmds = cmds  # Needed so can unittest this method as no return
 
     # ----------------------------------------------------------------------------
-    # 2a. ORG_CMD: Filters the commands based on the host got from nornir task
+    # ORG_CMD: Filters the commands based on the host got from nornir task
     # ----------------------------------------------------------------------------
     def organise_cmds(self, input_data: Dict[str, Any]) -> list:
         cmds = dict(print=[], vital=[], detail=[], run_cfg=False)
@@ -305,7 +304,6 @@ class NornirCommands:
     # SAVE_CMD: Uses separate methods to runs and save the command outputs to file
     # ----------------------------------------------------------------------------
     def run_save_cmd(self, run_type: str, data: Dict[str, Any], cmds: List) -> str:
-
         if len(cmds) != 0:
             output = self.run_cmds(cmds, logging.DEBUG)
             output_file = self.save_cmds(run_type, data, output)
@@ -336,11 +334,12 @@ class NornirCommands:
         return f"✅ Created compare HTML file '{output_file}'"
 
     # ----------------------------------------------------------------------------
-    # GET_CMP_FILES: Gets last 2 files and compares them
+    # POST_DIFF: Gets last 2 files and compares them
     # ----------------------------------------------------------------------------
     def pos_create_diff(self, file_type: str, output_fldr: str) -> str:
         hostname = str(self.task.host)
         file_filter = os.path.join(output_fldr, hostname + "_" + file_type + "*")
+        # Uses glob to match file names using a filter, then selects last 2 (most recent) to compare
         files = glob.glob(file_filter)
         files.sort(reverse=True)
         if len(files) >= 2:
@@ -351,19 +350,19 @@ class NornirCommands:
 
 
 # ----------------------------------------------------------------------------
-# 2. Uses nornir to run commands
+# 3. Uses nornir to run commands
 # ----------------------------------------------------------------------------
 class NornirEngine:
-    def __init__(self, nr_inv: "nornir"):
+    def __init__(self, nr_inv: Nornir):
         self.nr_inv = nr_inv
 
     # ----------------------------------------------------------------------------
     # 2b. Command engine runs the sub-tasks to get commands and possibly save results to file
     # ----------------------------------------------------------------------------
-    def cmd_engine(
-        self, task: "task", data: Dict[str, Any], run_type: str
-    ) -> "MultiResult":
+    def cmd_engine(self, task: Task, data: Dict[str, Any], run_type: str) -> Result:
         self.nr_cmd = NornirCommands(task)
+
+        # ORG_CMD: Organises cmds to be run and also creates empty lists to store results
         result, empty_result = ([] for i in range(2))
         cmds = self.nr_cmd.organise_cmds(data.get("input_data", {}))
 

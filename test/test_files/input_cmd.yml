@@ -1,5 +1,5 @@
 hosts:
-  TEST_HOST:
+  R1:
     cmd_print:
       - show run | in hostn
     cmd_vital:
