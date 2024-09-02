@@ -32,7 +32,7 @@ input_cmd_file: str = "input_cmd.yml"  # Commands to be run, is in project folde
 # 1. Addition of input arguments and input file validation
 # ----------------------------------------------------------------------------
 class InputValidate:
-    def __init__(self, working_directory) -> Dict[str, Any]:
+    def __init__(self, working_directory) -> None:
         my_theme = {"repr.ipv4": "none", "repr.number": "none", "repr.call": "none"}
         self.rc = Console(theme=Theme(my_theme))
         self.working_dir = working_directory
@@ -226,7 +226,7 @@ class InputValidate:
 # 2. Uses nornir to run commands
 # ----------------------------------------------------------------------------
 class NornirCommands:
-    def __init__(self, task: Task):
+    def __init__(self, task: Task) -> None:
         self.task = task
 
     # ----------------------------------------------------------------------------
@@ -353,7 +353,7 @@ class NornirCommands:
 # 3. Uses nornir to run commands
 # ----------------------------------------------------------------------------
 class NornirEngine:
-    def __init__(self, nr_inv: Nornir):
+    def __init__(self, nr_inv: Nornir) -> None:
         self.nr_inv = nr_inv
 
     # ----------------------------------------------------------------------------

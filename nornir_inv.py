@@ -17,7 +17,7 @@ from nornir_rich.functions import print_inventory
 # BUILD_INV: Builds the Nornir inventory of groups and devices
 # ----------------------------------------------------------------------------
 class BuildInventory:
-    def __init__(self):
+    def __init__(self) -> None:
         my_theme = {"repr.ipv4": "none", "repr.number": "none", "repr.call": "none"}
         self.rc = Console(theme=Theme(my_theme))
 
