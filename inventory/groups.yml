@@ -35,5 +35,8 @@ checkpoint:
   connection_options:
     netmiko:
       platform: checkpoint_gaia_ssh
-ftd: {}
+paloalto:
+  connection_options:
+    netmiko:
+      platform: paloalto_panos
 unknown: {}

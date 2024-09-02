@@ -1,10 +1,11 @@
 hosts:
-  # HME-C3560-SWI01:
   AZ-ASR-WAN01:
     # run_cfg: True
     cmd_print:
       - show clock
       - show ip int brief
+      - show ip route 0.0.0.0
+      - ping 8.8.8.8
       # - show interface status
       # - show ip route vrf BLU
       # - show ip route

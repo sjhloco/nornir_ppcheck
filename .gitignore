@@ -4,6 +4,4 @@
 **/.pytest_cache
 **/__pycache__
 **/nornir.log
-**/TODO
-inv_settings.yml
-/CH001/output
+# /CH001/output
