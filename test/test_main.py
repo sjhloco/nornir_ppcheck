@@ -67,7 +67,7 @@ class TestInputValidate:
     def test_dir_exist_get_paths(self, capsys):
         # Test it creates a dict with print filename in it
         err_msg = "❌ dir_exist_get_paths: 'Print' input file variable creation failed"
-        desired_result = None, None, input_file
+        desired_result = "", "", input_file
         actual_result = input_val.dir_exist_get_paths("print", input_file)
         assert actual_result == desired_result, err_msg
         # Test if missing directory raises an error

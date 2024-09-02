@@ -32,7 +32,6 @@ groups:
     cmd_detail:
       - show ip ospf database
 
-
 all:
   run_cfg: True
   cmd_print:

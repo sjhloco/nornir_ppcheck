@@ -6,7 +6,7 @@ from datetime import datetime
 import glob
 import difflib
 import getpass
-from typing import Any, Dict, List
+from typing import Any, Optional
 from rich.console import Console
 from rich.theme import Theme
 from nornir.core import Nornir
@@ -40,11 +40,11 @@ class InputValidate:
     # ----------------------------------------------------------------------------
     # CHK_DIR: Checks if change directory exists and creates full file paths
     # ----------------------------------------------------------------------------
-    def dir_exist_get_paths(self, run_type: str, file_path: str) -> Dict[str, Any]:
+    def dir_exist_get_paths(self, run_type: str, file_path: str) -> tuple[str, ...]:
         # PRT: If is 'print' and a single input file (not directory) create input & output variable
         if ".yml" in file_path or ".yaml" in file_path:
             input_file = file_path
-            working_dir, output_fldr = (None for i in range(2))
+            working_dir, output_fldr = ("" for i in range(2))
         # DIR: Non-yaml format means is it a working directory. Check for env var and create input & output variable
         else:
             working_dir = os.path.join(
@@ -79,7 +79,7 @@ class InputValidate:
     # INPUT_FILE: Validates input files contents are of the correct format
     # ----------------------------------------------------------------------------
     def val_input_file(
-        self, run_type: str, input_file: str, input_data: Dict[str, Any]
+        self, run_type: str, input_file: str, input_data: dict[str, Any]
     ) -> None:
         if input_data == None:
             self.rc.print(f":x: The '{run_type}' input file {input_file} is empty")
@@ -97,7 +97,7 @@ class InputValidate:
     # ----------------------------------------------------------------------------
     # 1a. Adds additional arguments to the Nornir Inventory parser arguments
     # ----------------------------------------------------------------------------
-    def add_arg_parser(self, nr_inv_args) -> Dict[str, Any]:
+    def add_arg_parser(self, nr_inv_args) -> dict[str, Any]:
         args = nr_inv_args.add_arg_parser()
         args.add_argument(
             "-u",
@@ -146,7 +146,7 @@ class InputValidate:
     # ----------------------------------------------------------------------------
     # 1b. Gathers username/password checking various input options
     # ----------------------------------------------------------------------------
-    def get_user_pass(self, args: Dict[str, Any]) -> Dict[str, str]:
+    def get_user_pass(self, args: dict[str, Any]) -> dict[str, str]:
         # USER: Check for username in this order: args, env var, var, prompt
         device = {}
         if args.get("username") != None:
@@ -167,7 +167,7 @@ class InputValidate:
     # ----------------------------------------------------------------------------
     # 1c. Get only the args for different run types and from that the get one that is used
     # ----------------------------------------------------------------------------
-    def get_run_type(self, args: Dict[str, Any]) -> str:
+    def get_run_type(self, args: dict[str, Any]) -> tuple[str | None, str | None]:
         run_type, file_path = (None for i in range(2))
         wanted_args = [
             "print",
@@ -188,7 +188,7 @@ class InputValidate:
     # ----------------------------------------------------------------------------
     # 1d. If compare arg validates all the files exist (a list of 3 elements, output_fldr & 2 compare files)
     # ----------------------------------------------------------------------------
-    def val_compare_arg(self, run_type: str, file_path: list) -> Dict[str, Any]:
+    def val_compare_arg(self, run_type: str, file_path: list) -> dict[str, Any]:
         missing_files = []
         # DIR: Check that output dir exists and get full file path
         working_dir, output_fldr, z = self.dir_exist_get_paths(run_type, file_path[0])
@@ -206,7 +206,7 @@ class InputValidate:
     # ----------------------------------------------------------------------------
     # 1e. Validates input command file exists and contents are of the correct format
     # ----------------------------------------------------------------------------
-    def val_noncompare_arg(self, run_type: str, file_path: str) -> Dict[str, Any]:
+    def val_noncompare_arg(self, run_type: str, file_path: str) -> dict[str, Any]:
         # DIR: Check that output dir exists and get full file path
         z, output_fldr, input_file = self.dir_exist_get_paths(run_type, file_path)
         # FILE: Check input file exists and loads and validate contents
@@ -217,9 +217,9 @@ class InputValidate:
                 input_data = yaml.load(file_content, Loader=yaml.FullLoader)
             # ERR/RTR: Errors or returns file paths based on whether input file correctly formatted
             self.val_input_file(run_type, input_file, input_data)
-            return dict(
-                output_fldr=output_fldr, input_file=input_file, input_data=input_data
-            )
+        return dict(
+            output_fldr=output_fldr, input_file=input_file, input_data=input_data
+        )
 
 
 # ----------------------------------------------------------------------------
@@ -232,7 +232,7 @@ class NornirCommands:
     # ----------------------------------------------------------------------------
     # CMDS: Creates a dictionary of the commands
     # ----------------------------------------------------------------------------
-    def get_cmds(self, cmds, input_data: Dict[str, Any]) -> None:
+    def get_cmds(self, cmds, input_data: dict[str, Any]) -> None:
         cmds["run_cfg"] = cmds["run_cfg"] + input_data.get("run_cfg", False)
         cmds["print"].extend(input_data.get("cmd_print", []))
         cmds["vital"].extend(input_data.get("cmd_vital", []))
@@ -242,7 +242,7 @@ class NornirCommands:
     # ----------------------------------------------------------------------------
     # ORG_CMD: Filters the commands based on the host got from nornir task
     # ----------------------------------------------------------------------------
-    def organise_cmds(self, input_data: Dict[str, Any]) -> list:
+    def organise_cmds(self, input_data: dict[str, Any]) -> dict[str, Any]:
         cmds = dict(print=[], vital=[], detail=[], run_cfg=False)
         # If run_cfg is set gathers and saves that first before getting the rest of commands
         if input_data.get("all") != None:
@@ -265,7 +265,7 @@ class NornirCommands:
     # ----------------------------------------------------------------------------
     # RUN_CMD: Runs a nornir task that executes a list of commands on a device
     # ----------------------------------------------------------------------------
-    def run_cmds(self, cmd: List, sev_level: "logging") -> str:
+    def run_cmds(self, cmd: list, sev_level: int) -> str:
         all_output = ""
         for each_cmd in cmd:
             output = "==== " + each_cmd + " " + "=" * (79 - len(each_cmd)) + "\n"
@@ -281,7 +281,7 @@ class NornirCommands:
     # ----------------------------------------------------------------------------
     # SAVE_CMD: Runs a nornir task to save cmd output (gathered by diff method) to file
     # ----------------------------------------------------------------------------
-    def save_cmds(self, run_type: str, data: Dict[str, Any], output: str) -> str:
+    def save_cmds(self, run_type: str, data: dict[str, Any], output: str) -> str:
         date = datetime.now().strftime("%Y%m%d-%H%M")
         file_name = str(self.task.host) + "_" + run_type + "_" + date + ".txt"
         output_file = os.path.join(data["output_fldr"], file_name)
@@ -296,14 +296,14 @@ class NornirCommands:
     # ----------------------------------------------------------------------------
     # PRINT_CMD: Runs and prints the command outputs to screen
     # ----------------------------------------------------------------------------
-    def run_print_cmd(self, cmds: List) -> None:
+    def run_print_cmd(self, cmds: list) -> None:
         if len(cmds) != 0:
             self.run_cmds(cmds, logging.INFO)
 
     # ----------------------------------------------------------------------------
     # SAVE_CMD: Uses separate methods to runs and save the command outputs to file
     # ----------------------------------------------------------------------------
-    def run_save_cmd(self, run_type: str, data: Dict[str, Any], cmds: List) -> str:
+    def run_save_cmd(self, run_type: str, data: dict[str, Any], cmds: list) -> str:
         if len(cmds) != 0:
             output = self.run_cmds(cmds, logging.DEBUG)
             output_file = self.save_cmds(run_type, data, output)
@@ -313,7 +313,7 @@ class NornirCommands:
     # ----------------------------------------------------------------------------
     # DIFF: Create HTML diff file from 2 input files
     # ----------------------------------------------------------------------------
-    def create_diff(self, data: Dict[str, Any]) -> str:
+    def create_diff(self, data: dict[str, Any]) -> str:
         # Create file names and load compare files
         pre_file_name = data["cmp_file1"].split("/")[-1]
         post_file_name = data["cmp_file2"].split("/")[-1]
@@ -359,7 +359,9 @@ class NornirEngine:
     # ----------------------------------------------------------------------------
     # 2b. Command engine runs the sub-tasks to get commands and possibly save results to file
     # ----------------------------------------------------------------------------
-    def cmd_engine(self, task: Task, data: Dict[str, Any], run_type: str) -> Result:
+    def cmd_engine(
+        self, task: Task, data: dict[str, Any], run_type: str
+    ) -> Optional[Result]:
         self.nr_cmd = NornirCommands(task)
 
         # ORG_CMD: Organises cmds to be run and also creates empty lists to store results
@@ -411,11 +413,13 @@ class NornirEngine:
             except:
                 pass
             return Result(host=task.host, result="\n".join(result))
+        else:
+            return None
 
     # ----------------------------------------------------------------------------
     # 2c. Task engine to run nornir task for commands and prints result
     # ----------------------------------------------------------------------------
-    def task_engine(self, run_type: str, data: Dict[str, Any]) -> None:
+    def task_engine(self, run_type: str, data: dict[str, Any]) -> None:
         run_type = run_type.replace("_save", "")
         # The parent nornir task in which the cmd_engine tuns the nornir sub-tasks
         if run_type != "validate":
@@ -439,7 +443,9 @@ class NornirEngine:
                 result[list(result.keys())[0]].report_text
                 print_result(result, vars=["result", "report_text"])
             except:
-                print_result(result, vars=["result"], line_breaks=True)
+                print_result(result, vars=["result"])
+                # Incase want to use orig nornir_print, dont use as doesnt delete empty results when run with prt flag
+                # print_result(result, vars=["result"], line_breaks=True)
 
 
 # ----------------------------------------------------------------------------

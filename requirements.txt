@@ -45,7 +45,7 @@ netutils==1.9.1
 nornir==3.4.1
 nornir-jinja2==0.2.0
 nornir-netmiko==1.0.1
-nornir-rich==0.1.6
+nornir-rich @ git+https://github.com/sjhloco/nornir_rich.git@48e5ebcadda61d138eab04cb0f0d2416038f7785
 nornir-utils==0.2.0
 ntc_templates==6.0.0
 orionsdk==0.4.0
